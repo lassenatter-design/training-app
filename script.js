@@ -378,8 +378,12 @@ document.getElementById("importDocs").addEventListener("click", () => {
       const filePath = `${Date.now()}-${file.name}`;
 
       await supa.storage
-        .from("training-docs")
-        .upload(filePath, file);
+      .from("training-docs")
+      .upload(filePath, file, {
+        contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        cacheControl: "3600",
+        upsert: false
+      });
 
       inserts.push({
         phase: phase,
