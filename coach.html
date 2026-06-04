@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Trainerbereich</title>
+  <link rel="stylesheet" href="style.css">
+
+  <!-- LOGIN-SCHUTZ -->
+  <script>
+    // Wenn niemand eingeloggt ist → zurück zum Login
+    if (!localStorage.role) {
+      window.location.href = "index.html";
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script>
+  const SUPABASE_URL = "https://fddhckjikuudrrxlbnis.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_9uIpVX9FZJk16PGKZUYk6Q_uErqf5_G";
+
+  const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  </script>
+
+</head>
+
+<body class="apple-body">
+
+  <header class="apple-header">
+    <h1>Trainerbereich</h1>
+
+    <!-- LOGOUT BUTTON -->
+    <button onclick="logout()" class="logout-btn">Logout</button>
+
+    <script>
+      function logout() {
+        localStorage.removeItem("role");
+        window.location.href = "index.html";
+      }
+    </script>
+  </header>
+
+  <main class="apple-main">
+    <section class="apple-card">
+      <h2>Monatskalender</h2>
+
+      <!-- IMPORT BUTTON -->
+      <button id="importExcel" class="import-btn">Excel importieren</button>
+      <button id="importDocs" class="import-btn">Word-Dateien importieren</button>
+
+
+      <div class="calendar-header">
+        <button class="month-btn" id="prevMonth">‹</button>
+        <h2 id="monthName">Monat</h2>
+        <button class="month-btn" id="nextMonth">›</button>
+      </div>
+
+      <div id="calendarGrid" class="calendar-grid"></div>
+    </section>
+  </main>
+
+  <!-- BUTTON NACH DEM LADEN VERSTECKEN, WENN ATHLET -->
+  <script>
+    window.onload = () => {
+      if (localStorage.role !== "coach") {
+        document.getElementById("importExcel").style.display = "none";
+      }
+    };
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script src="script.js"></script>
+
+</body>
+</html>
