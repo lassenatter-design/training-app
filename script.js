@@ -13,7 +13,7 @@ let currentDate = new Date();
 
 async function init() {
   // Aktuellen User holen
-  const { data: userData } = await supabase.auth.getUser();
+  const { data: userData } = await supa.auth.getUser();
   currentUser = userData?.user || null;
 
   // Wenn kein User → zurück zum Login

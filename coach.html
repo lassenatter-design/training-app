@@ -5,20 +5,15 @@
   <title>Trainerbereich</title>
   <link rel="stylesheet" href="style.css">
 
-  <!-- LOGIN-SCHUTZ -->
-  <script>
-    // Wenn niemand eingeloggt ist → zurück zum Login
-    if (!localStorage.role) {
-      window.location.href = "index.html";
-    }
-  </script>
+  <!-- Supabase Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <script>
-  const SUPABASE_URL = "https://fddhckjikuudrrxlbnis.supabase.co";
-  const SUPABASE_ANON_KEY = "sb_publishable_9uIpVX9FZJk16PGKZUYk6Q_uErqf5_G";
+    const SUPABASE_URL = "https://fddhckjikuudrrxlbnis.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_9uIpVX9FZJk16PGKZUYk6Q_uErqf5_G";
 
-  const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // WICHTIG: neue Variable "supa" statt "supabase"
+    const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   </script>
 
 </head>
@@ -32,8 +27,8 @@
     <button onclick="logout()" class="logout-btn">Logout</button>
 
     <script>
-      function logout() {
-        localStorage.removeItem("role");
+      async function logout() {
+        await supa.auth.signOut();
         window.location.href = "index.html";
       }
     </script>
@@ -43,10 +38,9 @@
     <section class="apple-card">
       <h2>Monatskalender</h2>
 
-      <!-- IMPORT BUTTON -->
+      <!-- IMPORT BUTTONS -->
       <button id="importExcel" class="import-btn">Excel importieren</button>
       <button id="importDocs" class="import-btn">Word-Dateien importieren</button>
-
 
       <div class="calendar-header">
         <button class="month-btn" id="prevMonth">‹</button>
@@ -58,16 +52,10 @@
     </section>
   </main>
 
-  <!-- BUTTON NACH DEM LADEN VERSTECKEN, WENN ATHLET -->
-  <script>
-    window.onload = () => {
-      if (localStorage.role !== "coach") {
-        document.getElementById("importExcel").style.display = "none";
-      }
-    };
-  </script>
-
+  <!-- XLSX + SCRIPT -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+  <!-- WICHTIG: script.js benutzt jetzt "supa" -->
   <script src="script.js"></script>
 
 </body>
