@@ -9,7 +9,7 @@
   <script>
     const SUPABASE_URL = "https://fddhckjikuudrrxlbnis.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_9uIpVX9FZJk16PGKZUYk6Q_uErqf5_G";
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   </script>
 
   <style>
@@ -38,7 +38,7 @@
         return;
       }
 
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supa.auth.signInWithPassword({
         email: email,
         password: password
       });
