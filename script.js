@@ -1,5 +1,5 @@
 // ------------------------------
-// SUPABASE STATE
+// supa STATE
 // ------------------------------
 
 let currentUser = null;
@@ -47,7 +47,7 @@ window.addEventListener("load", init);
 // ------------------------------
 
 async function loadTrainings() {
-  const { data, error } = await supabase
+  const { data, error } = await supa
     .from("trainings")
     .select("*")
     .order("date", { ascending: true });
@@ -60,7 +60,7 @@ async function loadTrainings() {
 // ------------------------------
 
 async function loadWordFiles() {
-  const { data, error } = await supabase
+  const { data, error } = await supa
     .from("word_files")
     .select("*")
     .order("created_at", { ascending: true });
@@ -198,7 +198,7 @@ function openDayPopup(dateString) {
       );
 
       if (match) {
-        const { data } = supabase
+        const { data } = supa
           .storage
           .from("training-docs")
           .getPublicUrl(match.file_path);
@@ -240,7 +240,7 @@ document.getElementById("nextMonth").addEventListener("click", () => {
 });
 
 // ------------------------------
-// EXCEL IMPORT → SUPABASE
+// EXCEL IMPORT → supa
 // ------------------------------
 
 document.getElementById("importExcel").addEventListener("click", () => {
@@ -259,7 +259,7 @@ document.getElementById("importExcel").addEventListener("click", () => {
     const workbook = XLSX.read(data);
 
     // Alte Einträge löschen (optional)
-    await supabase.from("trainings").delete().neq("id", 0);
+    await supa.from("trainings").delete().neq("id", 0);
 
     const inserts = [];
 
@@ -333,7 +333,7 @@ document.getElementById("importExcel").addEventListener("click", () => {
     });
 
     if (inserts.length > 0) {
-      await supabase.from("trainings").insert(inserts);
+      await supa.from("trainings").insert(inserts);
     }
 
     await loadTrainings();
@@ -345,7 +345,7 @@ document.getElementById("importExcel").addEventListener("click", () => {
 });
 
 // ------------------------------
-// WORD IMPORT → SUPABASE
+// WORD IMPORT → supa
 // ------------------------------
 
 document.getElementById("importDocs").addEventListener("click", () => {
@@ -377,7 +377,7 @@ document.getElementById("importDocs").addEventListener("click", () => {
 
       const filePath = `${Date.now()}-${file.name}`;
 
-      await supabase.storage
+      await supa.storage
         .from("training-docs")
         .upload(filePath, file);
 
@@ -390,7 +390,7 @@ document.getElementById("importDocs").addEventListener("click", () => {
     }
 
     if (inserts.length > 0) {
-      await supabase.from("word_files").insert(inserts);
+      await supa.from("word_files").insert(inserts);
     }
 
     await loadWordFiles();
