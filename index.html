@@ -1,38 +1,46 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <title>Training Login</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <meta charset="UTF-8">
+  <title>Login</title>
 
+  <!-- Supabase Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-  const SUPABASE_URL = "https://fddhckjikuudrrxlbnis.supabase.co";
-  const SUPABASE_ANON_KEY = "sb_publishable_9uIpVX9FZJk16PGKZUYk6Q_uErqf5_G";
-
-  const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const SUPABASE_URL = "https://fddhckjikuudrrxlbnis.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_9uIpVX9FZJk16PGKZUYk6Q_uErqf5_G";
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   </script>
 
+  <style>
+    body { font-family: Arial; padding: 40px; }
+    input { display:block; margin:10px 0; padding:10px; width:250px; }
+    button { padding:10px 20px; cursor:pointer; }
+  </style>
 </head>
+
 <body>
 
-    <div class="login-box">
-        <h2>Anmeldung</h2>
+  <h1>Login</h1>
 
-        <input id="email" type="text" placeholder="Benutzername">
-        <input id="password" type="password" placeholder="Passwort">
+  <input id="email" type="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Passwort">
 
-        <button onclick="login()">Login</button>
-    </div>
+  <button onclick="login()">Login</button>
 
-    <script>
+  <script>
     async function login() {
-      const user = document.getElementById("email").value.trim();
-      const pass = document.getElementById("password").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+
+      if (!email || !password) {
+        alert("Bitte Email und Passwort eingeben");
+        return;
+      }
 
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: user,
-        password: pass
+        email: email,
+        password: password
       });
 
       if (error) {
@@ -40,9 +48,10 @@
         return;
       }
 
+      // Weiterleiten
       window.location.href = "coach.html";
     }
-    </script>
+  </script>
 
 </body>
 </html>
