@@ -12,8 +12,17 @@
     const SUPABASE_URL = "https://fddhckjikuudrrxlbnis.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_9uIpVX9FZJk16PGKZUYk6Q_uErqf5_G";
 
-    // WICHTIG: neue Variable "supa" statt "supabase"
+    // WICHTIG: neue Variable "supa"
     const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // LOGIN-SCHUTZ (Supabase)
+    async function protectPage() {
+      const { data } = await supa.auth.getUser();
+      if (!data.user) {
+        window.location.href = "index.html";
+      }
+    }
+    protectPage();
   </script>
 
 </head>
@@ -54,6 +63,19 @@
 
   <!-- XLSX + SCRIPT -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+  <!-- Buttons für Athleten verstecken -->
+  <script>
+    window.onload = async () => {
+      const { data } = await supa.auth.getUser();
+      const email = data.user?.email;
+
+      if (email !== "coach@training.de") {
+        document.getElementById("importExcel").style.display = "none";
+        document.getElementById("importDocs").style.display = "none";
+      }
+    };
+  </script>
 
   <!-- WICHTIG: script.js benutzt jetzt "supa" -->
   <script src="script.js"></script>
