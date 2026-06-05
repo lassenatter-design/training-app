@@ -598,3 +598,64 @@ body {
   overflow-x: hidden;
   box-sizing: border-box;
 }
+/* --- MOBILE FIX: Kalender passt sich an --- */
+#calendarGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.calendar-day {
+  min-height: 80px;
+  padding: 6px;
+  box-sizing: border-box;
+}
+
+.calendar-day-number {
+  font-size: 14px;
+}
+
+.calendar-day-training {
+  font-size: 12px;
+  line-height: 1.2;
+}
+.apple-popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.apple-popup-box {
+  width: 90%;
+  max-width: 420px;
+  background: white;
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+  transform: translateY(20px);
+  opacity: 0;
+  transition: 0.25s ease;
+}
+
+.apple-popup-box.visible {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.apple-popup-close {
+  font-size: 26px;
+  font-weight: bold;
+  cursor: pointer;
+  text-align: right;
+}
