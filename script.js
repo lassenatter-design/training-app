@@ -6,31 +6,27 @@ let trainings = [];
 let wordFiles = [];
 let currentDate = new Date();
 
-
 // ------------------------------------------------------
 // INIT
 // ------------------------------------------------------
 async function init() {
 
-  // User holen
   const { data: userData } = await supa.auth.getUser();
   currentUser = userData?.user || null;
 
-  // Wenn kein User → zurück zum Login
   if (!currentUser) {
     window.location.href = "index.html";
     return;
   }
 
-  // Daten laden
   await loadTrainings();
   await loadWordFiles();
 
-  // Coach-UI anpassen
   const isCoach = currentUser.email === "coach@training.de";
+
   const athleteButtons = document.getElementById("coachAthleteButtons");
   if (!isCoach && athleteButtons) {
-  athleteButtons.style.display = "none";
+    athleteButtons.style.display = "none";
   }
 
   const importExcelBtn = document.getElementById("importExcel");
@@ -46,7 +42,6 @@ async function init() {
 
 window.addEventListener("load", init);
 
-
 // ------------------------------------------------------
 // TRAININGS LADEN
 // ------------------------------------------------------
@@ -59,7 +54,6 @@ async function loadTrainings() {
   trainings = data || [];
 }
 
-
 // ------------------------------------------------------
 // WORD-DATEIEN LADEN
 // ------------------------------------------------------
@@ -71,7 +65,6 @@ async function loadWordFiles() {
 
   wordFiles = data || [];
 }
-
 
 // ------------------------------------------------------
 // KALENDER RENDERN
@@ -96,7 +89,6 @@ function renderCalendar() {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const offset = firstDay === 0 ? 6 : firstDay - 1;
 
-  // Leere Felder
   for (let i = 0; i < offset; i++) {
     const emptyCell = document.createElement("div");
     emptyCell.classList.add("calendar-day");
@@ -104,7 +96,6 @@ function renderCalendar() {
     calendarGrid.appendChild(emptyCell);
   }
 
-  // Tage einfügen
   for (let day = 1; day <= daysInMonth; day++) {
 
     const cell = document.createElement("div");
@@ -118,7 +109,6 @@ function renderCalendar() {
     const dateString = `${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
     const dayTrainings = trainings.filter(t => t.date === dateString);
 
-    // Trainings anzeigen
     dayTrainings.forEach(t => {
       if (t.athlete !== "Phase") {
         const label = document.createElement("div");
@@ -134,7 +124,6 @@ function renderCalendar() {
       }
     });
 
-    // Phase anzeigen
     const phaseForDay = dayTrainings.find(t => t.athlete === "Phase");
     if (phaseForDay) {
       const phaseLabel = document.createElement("div");
@@ -146,12 +135,10 @@ function renderCalendar() {
       cell.appendChild(phaseLabel);
     }
 
-    // Popup öffnen
     cell.addEventListener("click", () => openDayPopup(dateString));
     calendarGrid.appendChild(cell);
   }
 }
-
 
 // ------------------------------------------------------
 // POPUP
@@ -184,6 +171,7 @@ function openDayPopup(dateString) {
     list.textContent = "Keine Einträge.";
   } else {
     items.forEach(t => {
+
       const line = document.createElement("div");
       line.classList.add("apple-popup-line");
 
@@ -195,6 +183,29 @@ function openDayPopup(dateString) {
       }
 
       list.appendChild(line);
+
+      // ⭐ DOWNLOAD-LINKS (NEU)
+      const match = wordFiles.find(w =>
+        (w.phase || "").toLowerCase() === (t.phase || "").toLowerCase() &&
+        (w.variant || "").toLowerCase() === (t.variant || "").toLowerCase() &&
+        (t.sport || "").toLowerCase().includes((w.sport || "").toLowerCase())
+      );
+
+      if (match) {
+        const { data } = supa
+          .storage
+          .from("training-docs")
+          .getPublicUrl(match.file_path);
+
+        const download = document.createElement("a");
+        download.textContent = "Trainingsplan herunterladen";
+        download.href = data.publicUrl;
+        download.download = match.file_path.split("/").pop();
+        download.classList.add("download-link");
+
+        list.appendChild(download);
+      }
+
     });
   }
 
@@ -282,7 +293,6 @@ function openDayPopup(dateString) {
   }, 10);
 }
 
-
 // ------------------------------------------------------
 // MONATSWECHSEL
 // ------------------------------------------------------
@@ -296,11 +306,11 @@ document.getElementById("nextMonth").addEventListener("click", () => {
   renderCalendar();
 });
 
-
 // ------------------------------------------------------
 // EXCEL IMPORT (Coach)
 // ------------------------------------------------------
 document.getElementById("importExcel").addEventListener("click", () => {
+
   if (!currentUser || currentUser.email !== "coach@training.de") {
     alert("Nur der Coach darf den Kalender bearbeiten.");
     return;
@@ -311,6 +321,7 @@ document.getElementById("importExcel").addEventListener("click", () => {
   input.accept = ".xlsx";
 
   input.onchange = async (e) => {
+
     const file = e.target.files[0];
     const data = await file.arrayBuffer();
     const workbook = XLSX.read(data);
@@ -320,6 +331,7 @@ document.getElementById("importExcel").addEventListener("click", () => {
     const inserts = [];
 
     workbook.SheetNames.forEach(sheetName => {
+
       const sheet = workbook.Sheets[sheetName];
       const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
 
@@ -396,7 +408,6 @@ document.getElementById("importExcel").addEventListener("click", () => {
 
   input.click();
 });
-
 
 // ------------------------------------------------------
 // WORD IMPORT (Coach)

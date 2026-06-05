@@ -520,3 +520,81 @@ body {
 .athlete-btn:active {
   transform: scale(0.97);
 }
+/* --- MOBILE FIX: Kalender passt sich an --- */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* Tage */
+.calendar-day {
+  min-height: 80px;
+  padding: 6px;
+  box-sizing: border-box;
+}
+
+/* Zahlen */
+.calendar-day-number {
+  font-size: 14px;
+}
+
+/* Trainings */
+.calendar-day-training {
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+/* --- Popup auf Handy --- */
+.apple-popup-box {
+  width: 90%;
+  max-width: 400px;
+  padding: 20px;
+  border-radius: 16px;
+}
+
+/* Download-Button */
+.download-link {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  border-radius: 12px;
+  background: #007aff;
+  color: white;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+}
+/* Popup Box – responsive fix */
+.apple-popup-box {
+  width: 90%;
+  max-width: 500px;   /* vorher war es kleiner → zu eng */
+  padding: 20px;
+  border-radius: 16px;
+  background: white;
+  overflow-x: hidden; /* verhindert, dass Inhalte rechts rausfliegen */
+  box-sizing: border-box;
+}
+.download-link {
+  display: block;
+  width: 100%;
+  word-break: break-all; /* verhindert, dass lange URLs rausfliegen */
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  background: #007aff;
+  color: white;
+  text-align: center;
+  font-weight: 600;
+  text-decoration: none;
+}
+.apple-popup-content {
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
