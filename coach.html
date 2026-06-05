@@ -1,21 +1,22 @@
 <!DOCTYPE html>
-<html>
+<html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>Trainerbereich</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trainingsbereich</title>
   <link rel="stylesheet" href="style.css">
 
-  <!-- Supabase Client -->
+  <!-- Supabase laden -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+  <!-- Supabase initialisieren -->
   <script>
     const SUPABASE_URL = "https://fddhckjikuudrrxlbnis.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_9uIpVX9FZJk16PGKZUYk6Q_uErqf5_G";
 
-    // WICHTIG: neue Variable "supa"
     const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // LOGIN-SCHUTZ (Supabase)
+    // Login-Schutz
     async function protectPage() {
       const { data } = await supa.auth.getUser();
       if (!data.user) {
@@ -24,15 +25,19 @@
     }
     protectPage();
   </script>
-
 </head>
 
 <body class="apple-body">
 
   <header class="apple-header">
-    <h1>Trainerbereich</h1>
+    <h1>Trainingsbereich</h1>
+  <div id="coachAthleteButtons" class="athlete-buttons">
+  <button class="athlete-btn" data-athlete="Lasse">Lasse</button>
+  <button class="athlete-btn" data-athlete="Tora">Tora</button>
+  <button class="athlete-btn" data-athlete="Kerstin">Kerstin</button>
+  </div>
 
-    <!-- LOGOUT BUTTON -->
+
     <button onclick="logout()" class="logout-btn">Logout</button>
 
     <script>
@@ -47,7 +52,6 @@
     <section class="apple-card">
       <h2>Monatskalender</h2>
 
-      <!-- IMPORT BUTTONS -->
       <button id="importExcel" class="import-btn">Excel importieren</button>
       <button id="importDocs" class="import-btn">Word-Dateien importieren</button>
 
@@ -61,23 +65,10 @@
     </section>
   </main>
 
-  <!-- XLSX + SCRIPT -->
+  <!-- XLSX -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
-  <!-- Buttons für Athleten verstecken -->
-  <script>
-    window.onload = async () => {
-      const { data } = await supa.auth.getUser();
-      const email = data.user?.email;
-
-      if (email !== "coach@training.de") {
-        document.getElementById("importExcel").style.display = "none";
-        document.getElementById("importDocs").style.display = "none";
-      }
-    };
-  </script>
-
-  <!-- WICHTIG: script.js benutzt jetzt "supa" -->
+  <!-- Hauptscript (DEINE große Datei) -->
   <script src="script.js"></script>
 
 </body>

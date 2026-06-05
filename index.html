@@ -1,42 +1,62 @@
 <!DOCTYPE html>
-<html>
+<html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Training – Modern</title>
+  <link rel="stylesheet" href="style.css">
 
-  <!-- Supabase Client -->
+  <!-- Supabase laden -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Supabase initialisieren -->
   <script>
     const SUPABASE_URL = "https://fddhckjikuudrrxlbnis.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_9uIpVX9FZJk16PGKZUYk6Q_uErqf5_G";
+
     const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   </script>
-
-  <style>
-    body { font-family: Arial; padding: 40px; }
-    input { display:block; margin:10px 0; padding:10px; width:250px; }
-    button { padding:10px 20px; cursor:pointer; }
-  </style>
 </head>
 
 <body>
 
-  <h1>Login</h1>
+  <section class="hero">
+    <h1>Dein Training. Modern. Klar. Einfach.</h1>
+    <p>Trainingspläne, Word‑Uploads, Kalender – alles an einem Ort.</p>
 
-  <input id="email" type="email" placeholder="Email">
-  <input id="password" type="password" placeholder="Passwort">
+    <!-- ⭐ WICHTIG: Dieser Button MUSS existieren -->
+    <button id="openLogin" class="modern-btn">Jetzt anmelden</button>
+  </section>
 
-  <button onclick="login()">Login</button>
+  <!-- ⭐ LOGIN POPUP -->
+  <div id="loginOverlay" class="popup-overlay" style="display:none;">
+    <div class="popup-box">
+      <h2>Login</h2>
 
+      <input id="emailInput" type="email" placeholder="E-Mail">
+      <input id="passwordInput" type="password" placeholder="Passwort">
+
+      <button id="loginBtn" class="modern-btn">Anmelden</button>
+      <button id="closePopup" class="close-btn">Schließen</button>
+    </div>
+  </div>
+
+  <!-- ⭐ Login‑Script (NICHT script.js laden!) -->
   <script>
-    async function login() {
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value.trim();
+    // Popup öffnen
+    document.getElementById("openLogin").addEventListener("click", () => {
+      document.getElementById("loginOverlay").style.display = "flex";
+    });
 
-      if (!email || !password) {
-        alert("Bitte Email und Passwort eingeben");
-        return;
-      }
+    // Popup schließen
+    document.getElementById("closePopup").addEventListener("click", () => {
+      document.getElementById("loginOverlay").style.display = "none";
+    });
+
+    // Login
+    document.getElementById("loginBtn").addEventListener("click", async () => {
+      const email = document.getElementById("emailInput").value.trim();
+      const password = document.getElementById("passwordInput").value.trim();
 
       const { data, error } = await supa.auth.signInWithPassword({
         email: email,
@@ -44,13 +64,12 @@
       });
 
       if (error) {
-        alert("Login fehlgeschlagen");
+        alert("Login fehlgeschlagen!");
         return;
       }
 
-      // Weiterleiten
       window.location.href = "coach.html";
-    }
+    });
   </script>
 
 </body>

@@ -1,18 +1,18 @@
-// ------------------------------
-// supa STATE
-// ------------------------------
-
+// ------------------------------------------------------
+// GLOBAL STATE
+// ------------------------------------------------------
 let currentUser = null;
 let trainings = [];
 let wordFiles = [];
 let currentDate = new Date();
 
-// ------------------------------
-// INIT
-// ------------------------------
 
+// ------------------------------------------------------
+// INIT
+// ------------------------------------------------------
 async function init() {
-  // Aktuellen User holen
+
+  // User holen
   const { data: userData } = await supa.auth.getUser();
   currentUser = userData?.user || null;
 
@@ -26,8 +26,12 @@ async function init() {
   await loadTrainings();
   await loadWordFiles();
 
-  // UI anpassen (Coach vs Athlet)
+  // Coach-UI anpassen
   const isCoach = currentUser.email === "coach@training.de";
+  const athleteButtons = document.getElementById("coachAthleteButtons");
+  if (!isCoach && athleteButtons) {
+  athleteButtons.style.display = "none";
+  }
 
   const importExcelBtn = document.getElementById("importExcel");
   const importDocsBtn = document.getElementById("importDocs");
@@ -42,12 +46,12 @@ async function init() {
 
 window.addEventListener("load", init);
 
-// ------------------------------
-// TRAININGS LADEN
-// ------------------------------
 
+// ------------------------------------------------------
+// TRAININGS LADEN
+// ------------------------------------------------------
 async function loadTrainings() {
-  const { data, error } = await supa
+  const { data } = await supa
     .from("trainings")
     .select("*")
     .order("date", { ascending: true });
@@ -55,12 +59,12 @@ async function loadTrainings() {
   trainings = data || [];
 }
 
-// ------------------------------
-// WORD-DATEIEN LADEN
-// ------------------------------
 
+// ------------------------------------------------------
+// WORD-DATEIEN LADEN
+// ------------------------------------------------------
 async function loadWordFiles() {
-  const { data, error } = await supa
+  const { data } = await supa
     .from("word_files")
     .select("*")
     .order("created_at", { ascending: true });
@@ -68,11 +72,12 @@ async function loadWordFiles() {
   wordFiles = data || [];
 }
 
-// ------------------------------
-// KALENDER RENDERN
-// ------------------------------
 
+// ------------------------------------------------------
+// KALENDER RENDERN
+// ------------------------------------------------------
 function renderCalendar() {
+
   const monthName = document.getElementById("monthName");
   const calendarGrid = document.getElementById("calendarGrid");
 
@@ -91,7 +96,7 @@ function renderCalendar() {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const offset = firstDay === 0 ? 6 : firstDay - 1;
 
-  // Leere Felder vor dem 1. Tag
+  // Leere Felder
   for (let i = 0; i < offset; i++) {
     const emptyCell = document.createElement("div");
     emptyCell.classList.add("calendar-day");
@@ -101,6 +106,7 @@ function renderCalendar() {
 
   // Tage einfügen
   for (let day = 1; day <= daysInMonth; day++) {
+
     const cell = document.createElement("div");
     cell.classList.add("calendar-day");
 
@@ -112,7 +118,7 @@ function renderCalendar() {
     const dateString = `${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
     const dayTrainings = trainings.filter(t => t.date === dateString);
 
-    // ATHLETEN-TRAININGS
+    // Trainings anzeigen
     dayTrainings.forEach(t => {
       if (t.athlete !== "Phase") {
         const label = document.createElement("div");
@@ -128,7 +134,7 @@ function renderCalendar() {
       }
     });
 
-    // PHASE ANZEIGEN
+    // Phase anzeigen
     const phaseForDay = dayTrainings.find(t => t.athlete === "Phase");
     if (phaseForDay) {
       const phaseLabel = document.createElement("div");
@@ -142,16 +148,16 @@ function renderCalendar() {
 
     // Popup öffnen
     cell.addEventListener("click", () => openDayPopup(dateString));
-
     calendarGrid.appendChild(cell);
   }
 }
 
-// ------------------------------
-// POPUP
-// ------------------------------
 
+// ------------------------------------------------------
+// POPUP
+// ------------------------------------------------------
 function openDayPopup(dateString) {
+
   const oldPopup = document.querySelector(".apple-popup-overlay");
   if (oldPopup) oldPopup.remove();
 
@@ -189,28 +195,79 @@ function openDayPopup(dateString) {
       }
 
       list.appendChild(line);
-
-      // PASSENDE WORD-DATEI SUCHEN
-      const match = wordFiles.find(w =>
-        (w.phase || "").toLowerCase() === (t.phase || "").toLowerCase() &&
-        (w.variant || "").toLowerCase() === (t.variant || "").toLowerCase() &&
-        (w.sport || "").toLowerCase() === (t.sport || "").toLowerCase()
-      );
-
-      if (match) {
-        const { data } = supa
-          .storage
-          .from("training-docs")
-          .getPublicUrl(match.file_path);
-
-        const download = document.createElement("a");
-        download.textContent = "📄 Trainingsplan herunterladen";
-        download.href = data.publicUrl;
-        download.download = match.file_path.split("/").pop();
-        download.classList.add("download-link");
-        list.appendChild(download);
-      }
     });
+  }
+
+  // ⭐ ATHLETEN-ZEITEN
+  if (currentUser.email !== "coach@training.de") {
+
+    const divider = document.createElement("hr");
+    divider.style.margin = "15px 0";
+    list.appendChild(divider);
+
+    const label = document.createElement("div");
+    label.textContent = "Zeiten eintragen:";
+    label.style.marginBottom = "6px";
+    list.appendChild(label);
+
+    const timeContainer = document.createElement("div");
+    timeContainer.id = "timeContainer";
+    list.appendChild(timeContainer);
+
+    function addTimeField() {
+      const input = document.createElement("input");
+      input.type = "text";
+      input.placeholder = "z.B. 1:12";
+      input.classList.add("time-input");
+      input.style.width = "100%";
+      input.style.padding = "10px";
+      input.style.borderRadius = "10px";
+      input.style.border = "1px solid #ccc";
+      input.style.marginBottom = "10px";
+      timeContainer.appendChild(input);
+    }
+
+    addTimeField();
+
+    const addBtn = document.createElement("button");
+    addBtn.textContent = "+ Intervall hinzufügen";
+    addBtn.classList.add("modern-btn");
+    addBtn.style.width = "100%";
+    addBtn.style.marginBottom = "10px";
+    addBtn.onclick = () => addTimeField();
+    list.appendChild(addBtn);
+
+    const saveBtn = document.createElement("button");
+    saveBtn.textContent = "Zeiten speichern";
+    saveBtn.classList.add("modern-btn");
+    saveBtn.style.width = "100%";
+
+    saveBtn.onclick = async () => {
+      const inputs = timeContainer.querySelectorAll("input");
+      const sport = items[0]?.sport || "unbekannt";
+
+      let rep = 1;
+      for (const input of inputs) {
+        const timeValue = input.value.trim();
+        if (!timeValue) continue;
+
+        await supa.from("training_times").insert({
+          athlete: currentUser.email,
+          date: dateString,
+          sport: sport,
+          interval: "einfach",
+          rep: rep,
+          time: timeValue
+        });
+
+        rep++;
+      }
+
+      alert("Zeiten gespeichert!");
+      overlay.remove();
+    };
+
+    list.appendChild(saveBtn);
   }
 
   box.appendChild(closeBtn);
@@ -225,10 +282,10 @@ function openDayPopup(dateString) {
   }, 10);
 }
 
-// ------------------------------
-// MONATSWECHSEL
-// ------------------------------
 
+// ------------------------------------------------------
+// MONATSWECHSEL
+// ------------------------------------------------------
 document.getElementById("prevMonth").addEventListener("click", () => {
   currentDate.setMonth(currentDate.getMonth() - 1);
   renderCalendar();
@@ -239,10 +296,10 @@ document.getElementById("nextMonth").addEventListener("click", () => {
   renderCalendar();
 });
 
-// ------------------------------
-// EXCEL IMPORT → supa
-// ------------------------------
 
+// ------------------------------------------------------
+// EXCEL IMPORT (Coach)
+// ------------------------------------------------------
 document.getElementById("importExcel").addEventListener("click", () => {
   if (!currentUser || currentUser.email !== "coach@training.de") {
     alert("Nur der Coach darf den Kalender bearbeiten.");
@@ -258,7 +315,6 @@ document.getElementById("importExcel").addEventListener("click", () => {
     const data = await file.arrayBuffer();
     const workbook = XLSX.read(data);
 
-    // Alte Einträge löschen (optional)
     await supa.from("trainings").delete().neq("id", 0);
 
     const inserts = [];
@@ -268,7 +324,7 @@ document.getElementById("importExcel").addEventListener("click", () => {
       const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
 
       rows.forEach(row => {
-        // Datum
+
         let excelDate =
           row["Datum"] ||
           row["__EMPTY"] ||
@@ -277,6 +333,7 @@ document.getElementById("importExcel").addEventListener("click", () => {
         if (!excelDate) return;
 
         let jsDate;
+
         if (typeof excelDate === "number") {
           jsDate = XLSX.SSF.parse_date_code(excelDate);
         } else {
@@ -290,13 +347,10 @@ document.getElementById("importExcel").addEventListener("click", () => {
 
         const dateString = `${jsDate.y}-${String(jsDate.m).padStart(2,"0")}-${String(jsDate.d).padStart(2,"0")}`;
 
-        // PHASE
         const rawPhase = (row["Trainingsphase"] || "").trim();
         let phase = rawPhase.split("(")[0].trim();
 
-        // VARIANTE + SPORT aus "konkretes Training"
         const rawDetail = (row["konkretes Training"] || "").trim();
-
         let variant = "";
         let sport = "";
 
@@ -306,7 +360,6 @@ document.getElementById("importExcel").addEventListener("click", () => {
         const sportPart = rawDetail.split(")").pop().trim();
         if (sportPart) sport = sportPart;
 
-        // ATHLETEN
         ["Lasse","Tora","Kerstin"].forEach(name => {
           if (row[name] && row[name].trim() !== "") {
             inserts.push({
@@ -320,7 +373,6 @@ document.getElementById("importExcel").addEventListener("click", () => {
           }
         });
 
-        // Phase-Eintrag
         inserts.push({
           date: dateString,
           athlete: "Phase",
@@ -329,6 +381,7 @@ document.getElementById("importExcel").addEventListener("click", () => {
           variant: variant,
           sport: sport
         });
+
       });
     });
 
@@ -344,11 +397,12 @@ document.getElementById("importExcel").addEventListener("click", () => {
   input.click();
 });
 
-// ------------------------------
-// WORD IMPORT → supa
-// ------------------------------
 
+// ------------------------------------------------------
+// WORD IMPORT (Coach)
+// ------------------------------------------------------
 document.getElementById("importDocs").addEventListener("click", () => {
+
   if (!currentUser || currentUser.email !== "coach@training.de") {
     alert("Nur der Coach darf Word-Dateien importieren.");
     return;
@@ -360,14 +414,14 @@ document.getElementById("importDocs").addEventListener("click", () => {
   input.multiple = true;
 
   input.onchange = async (e) => {
-    const files = Array.from(e.target.files);
 
+    const files = Array.from(e.target.files);
     const inserts = [];
 
     for (const file of files) {
+
       const name = file.name.replace(".docx", "").trim();
 
-      // Beispiel: "Aufbau 2 (ChatGPT 3) Koppel"
       const phase = name.split("(")[0].trim();
 
       const variantMatch = name.match(/ChatGPT\s*\d+/i);
@@ -378,12 +432,12 @@ document.getElementById("importDocs").addEventListener("click", () => {
       const filePath = `${Date.now()}-${file.name}`;
 
       await supa.storage
-      .from("training-docs")
-      .upload(filePath, file, {
-        contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        cacheControl: "3600",
-        upsert: false
-      });
+        .from("training-docs")
+        .upload(filePath, file, {
+          contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          cacheControl: "3600",
+          upsert: false
+        });
 
       inserts.push({
         phase: phase,

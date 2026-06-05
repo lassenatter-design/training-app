@@ -266,3 +266,257 @@ button {
   font-size: 16px;
   color: #1d1d1f;
 }
+/* LOGIN BOX */
+.login-box {
+  max-width: 380px;
+  margin: 80px auto;
+  padding: 30px;
+  background: #ffffffcc;
+  backdrop-filter: blur(12px);
+  border-radius: 20px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+}
+
+/* INPUTS */
+.login-box input {
+  width: 100%;
+  padding: 14px;
+  margin: 10px 0;
+  border-radius: 12px;
+  border: 1px solid #ddd;
+  font-size: 16px;
+  transition: 0.2s;
+}
+
+.login-box input:focus {
+  border-color: #007aff;
+  box-shadow: 0 0 0 3px #007aff33;
+}
+
+/* BUTTON */
+.login-box button {
+  width: 100%;
+  padding: 14px;
+  background: #007aff;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.login-box button:hover {
+  background: #0062cc;
+}
+/* MOBILE OPTIMIERUNG */
+@media (max-width: 600px) {
+  h1, h2, h3 {
+    text-align: center;
+    font-size: 22px;
+  }
+
+  .calendar {
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+
+  .day {
+    padding: 8px;
+    font-size: 12px;
+  }
+
+  .apple-popup-box {
+    width: 90%;
+    padding: 20px;
+  }
+
+  .login-box {
+    margin: 40px 10px;
+    padding: 20px;
+  }
+}
+/* GLOBAL */
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #f5f7fa;
+  color: #222;
+}
+
+/* NAVIGATION */
+.nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 30px;
+  background: white;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.nav .logo {
+  font-size: 22px;
+  font-weight: 700;
+  color: #007aff;
+}
+
+.nav a {
+  margin-left: 20px;
+  text-decoration: none;
+  color: #333;
+  font-weight: 500;
+  transition: 0.2s;
+}
+
+.nav a:hover {
+  color: #007aff;
+}
+
+.nav-disabled {
+  color: #999;
+  cursor: not-allowed;
+  opacity: 0.5;
+  padding: 8px 12px;
+}
+
+/* HERO */
+.hero {
+  text-align: center;
+  padding: 80px 20px;
+  background: linear-gradient(135deg, #007aff, #00c6ff);
+  color: white;
+  border-radius: 0 0 40px 40px;
+}
+
+.hero h1 {
+  font-size: 38px;
+  margin-bottom: 10px;
+}
+
+.hero p {
+  font-size: 18px;
+  opacity: 0.9;
+}
+
+/* BUTTON */
+.modern-btn {
+  margin-top: 20px;
+  background: white;
+  color: #007aff;
+  padding: 14px 26px;
+  border-radius: 14px;
+  font-size: 18px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.modern-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+}
+
+/* FEATURES */
+.features {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  padding: 60px 20px;
+}
+
+.feature {
+  background: white;
+  padding: 30px;
+  border-radius: 20px;
+  width: 280px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+  text-align: center;
+}
+
+/* MOBILE */
+@media (max-width: 700px) {
+  .features {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .hero h1 {
+    font-size: 28px;
+  }
+
+  .hero p {
+    font-size: 16px;
+  }
+
+  .nav {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+/* POPUP OVERLAY */
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.4);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(4px);
+}
+
+/* POPUP BOX */
+.popup-box {
+  background: white;
+  padding: 30px;
+  border-radius: 20px;
+  width: 90%;
+  max-width: 350px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  text-align: center;
+}
+
+/* CLOSE BUTTON */
+.close-btn {
+  margin-top: 10px;
+  background: #ccc;
+  color: black;
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
+  width: 100%;
+  cursor: pointer;
+}
+.athlete-buttons {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.athlete-btn {
+  padding: 10px 18px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, #007aff, #0051c7);
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.athlete-btn:hover {
+  transform: scale(1.05);
+  background: linear-gradient(135deg, #0a84ff, #0062e3);
+}
+
+.athlete-btn:active {
+  transform: scale(0.97);
+}
