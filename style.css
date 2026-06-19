@@ -1062,3 +1062,27 @@ button, .import-btn, .month-btn, .training-entry, .logout-btn {
     max-width: 100% !important;
   }
 }
+/* --- SAFARI FIX: Kalender darf NIE umbrechen --- */
+.calendar-grid {
+  display: grid !important;
+  grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+}
+
+/* --- SAFARI FIX: Inhalt DARF umbrechen, aber Zelle NICHT --- */
+.calendar-day {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  white-space: normal !important;
+  padding: 4px !important;
+}
+
+/* --- SAFARI FIX: Text kleiner machen, damit er nicht das Grid sprengt --- */
+.calendar-day div {
+  font-size: 12px !important;
+  line-height: 1.2 !important;
+}
