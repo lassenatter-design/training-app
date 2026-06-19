@@ -1004,3 +1004,61 @@ body {
   background: #007aff;
   transform: translateY(-2px);
 }
+/* --- GITHUB FIX: Box-Sizing überall --- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box !important;
+}
+
+/* --- GITHUB FIX: Body Scrollbar wieder aktivieren --- */
+html, body {
+  height: auto !important;
+  min-height: 100% !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
+/* --- POPUP FIX: Scrollbar im Popup erzwingen --- */
+.apple-popup-box {
+  max-height: 90vh !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+/* --- BUTTON FIX: GitHub überschreibt Buttons --- */
+button, .import-btn, .month-btn, .training-entry, .logout-btn {
+  all: unset !important;
+  display: inline-block !important;
+  padding: 12px 18px !important;
+  border-radius: 12px !important;
+  background: #007aff !important;
+  color: white !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  text-align: center !important;
+  cursor: pointer !important;
+}
+
+/* --- KALENDER FIX: 7 Spalten erzwingen --- */
+.calendar-grid {
+  display: grid !important;
+  grid-template-columns: repeat(7, 1fr) !important;
+  width: 100% !important;
+  gap: 4px !important;
+}
+
+/* --- KALENDER TAG FIX: Tage dürfen NICHT umbrechen --- */
+.calendar-day {
+  min-height: 80px !important;
+  padding: 6px !important;
+  overflow: hidden !important;
+}
+
+/* --- MOBILE FIX: Kalender darf NICHT breiter sein als der Bildschirm --- */
+@media (max-width: 600px) {
+  .calendar-grid {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
