@@ -662,3 +662,345 @@ body {
 .calendar-grid {
   grid-template-columns: repeat(7, minmax(0, 1fr));
 }
+.apple-popup-box {
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.coach-analysis {
+  width: 95%;
+  margin: 20px auto;
+  padding: 25px;
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+}
+
+.hidden {
+  display: none;
+}
+
+.analysis-section {
+  margin-bottom: 30px;
+}
+
+.analysis-section h2 {
+  margin-bottom: 10px;
+  font-size: 24px;
+}
+
+.analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.analysis-box {
+  padding: 20px;
+  background: #f2f2f7;
+  border-radius: 15px;
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+}
+.coach-analysis {
+  width: 95%;
+  margin: 20px auto;
+  padding: 25px;
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+}
+
+.hidden {
+  display: none;
+}
+
+.coach-analysis-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.close-btn {
+  background: #ff3b30;
+  color: white;
+  border: none;
+  font-size: 28px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.analysis-section {
+  margin-bottom: 30px;
+}
+
+.analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.analysis-box {
+  padding: 20px;
+  background: #f2f2f7;
+  border-radius: 15px;
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+}
+
+.training-entry {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 8px;
+  border-radius: 10px;
+  border: none;
+  background: #e5e5ea;
+  cursor: pointer;
+  text-align: left;
+}
+
+.training-entry:hover {
+  background: #d1d1d6;
+}
+
+.coach-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.coach-table th, .coach-table td {
+  padding: 10px;
+  border-bottom: 1px solid #ccc;
+}
+/* --- COACH DASHBOARD WRAPPER --- */
+.coach-analysis {
+  width: 100%;
+  max-width: 1200px;
+  margin: 30px auto;
+  padding: 30px;
+  background: #ffffff;
+  border-radius: 24px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.12);
+  animation: fadeIn 0.3s ease;
+}
+
+.hidden {
+  display: none;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- HEADER --- */
+.coach-analysis-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.coach-analysis-header h1 {
+  font-size: 32px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.close-btn {
+  background: #ff3b30;
+  color: white;
+  border: none;
+  font-size: 28px;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.close-btn:hover {
+  background: #d92a22;
+}
+
+/* --- ANALYSE GRID --- */
+.analysis-section {
+  margin-bottom: 40px;
+}
+
+.analysis-section h2 {
+  font-size: 26px;
+  margin-bottom: 15px;
+}
+
+.analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.analysis-box {
+  background: #f7f7fa;
+  padding: 22px;
+  border-radius: 18px;
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+/* --- TRAININGS LISTE --- */
+.training-entry {
+  display: block;
+  width: 100%;
+  padding: 14px 18px;
+  margin-bottom: 10px;
+  border-radius: 14px;
+  border: none;
+  background: #e9e9ee;
+  cursor: pointer;
+  font-size: 17px;
+  text-align: left;
+  transition: 0.2s;
+}
+
+.training-entry:hover {
+  background: #d6d6db;
+}
+
+/* --- TRAINING DETAIL --- */
+.coach-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+  font-size: 17px;
+}
+
+.coach-table th {
+  background: #f2f2f7;
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+}
+
+.coach-table td {
+  padding: 12px;
+  border-bottom: 1px solid #ddd;
+}
+
+/* --- SPORT BADGES --- */
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+}
+
+.badge-swim { background: #007aff; }
+.badge-run { background: #ff9500; }
+.badge-bike { background: #34c759; }
+.training-entry {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  width: 100%;
+  padding: 16px 20px;
+  margin-bottom: 12px;
+
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e5e5ea;
+
+  font-size: 17px;
+  font-weight: 500;
+  color: #1c1c1e;
+
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+}
+
+.training-entry:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+  border-color: #d1d1d6;
+}
+.badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: white;
+}
+
+.badge-swim { background: #007aff; }
+.badge-run  { background: #ff9500; }
+.badge-bike { background: #34c759; }
+.athlete-btn {
+  width: 140px;
+  height: 140px;
+  background: #007aff;
+  border-radius: 22px;
+  border: none;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+
+  cursor: pointer;
+  transition: 0.2s ease;
+  box-shadow: 0 6px 18px rgba(0,122,255,0.25);
+  margin-bottom: 20px;
+}
+
+.athlete-btn:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 28px rgba(0,122,255,0.25);
+}
+
+.athlete-btn-icon {
+  font-size: 40px;
+  margin-bottom: 8px;
+}
+.logout-btn {
+  background: #007aff;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 14px;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s ease;
+  box-shadow: 0 6px 18px rgba(0,122,255,0.25);
+}
+
+.logout-btn:hover {
+  background: #007aff;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(0,122,255,0.25);
+}
+.logout-btn {
+  all: unset;
+  background:#007aff;
+  padding: 12px 20px;
+  border-radius: 14px;
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(255,59,48,0.25);
+  display: inline-block;
+}
+.logout-btn:hover {
+  background: #007aff;
+  transform: translateY(-2px);
+}

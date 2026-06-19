@@ -1,16 +1,25 @@
 // ------------------------------------------------------
 // GLOBAL STATE
 // ------------------------------------------------------
+
 let currentUser = null;
 let trainings = [];
 let wordFiles = [];
 let currentDate = new Date();
 
+// Zeitformatierung
+function formatSeconds(sec) {
+  if (sec === null || sec === undefined) return "-";
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
 // ------------------------------------------------------
 // INIT
 // ------------------------------------------------------
-async function init() {
 
+async function init() {
   const { data: userData } = await supa.auth.getUser();
   currentUser = userData?.user || null;
 
@@ -23,8 +32,8 @@ async function init() {
   await loadWordFiles();
 
   const isCoach = currentUser.email === "coach@training.de";
-
   const athleteButtons = document.getElementById("coachAthleteButtons");
+
   if (!isCoach && athleteButtons) {
     athleteButtons.style.display = "none";
   }
@@ -45,18 +54,32 @@ window.addEventListener("load", init);
 // ------------------------------------------------------
 // TRAININGS LADEN
 // ------------------------------------------------------
+
 async function loadTrainings() {
-  const { data } = await supa
+  const { data, error } = await supa
     .from("trainings")
     .select("*")
     .order("date", { ascending: true });
 
-  trainings = data || [];
+  if (error) {
+    console.error("Fehler beim Laden der Trainings:", error);
+    trainings = [];
+    return;
+  }
+
+  if (currentUser.email === "coach@training.de") {
+    trainings = data || [];
+    return;
+  }
+
+  const athlete = getAthleteNameFromEmail(currentUser.email);
+  trainings = (data || []).filter(t => t.athlete === athlete);
 }
 
 // ------------------------------------------------------
 // WORD-DATEIEN LADEN
 // ------------------------------------------------------
+
 async function loadWordFiles() {
   const { data } = await supa
     .from("word_files")
@@ -67,10 +90,23 @@ async function loadWordFiles() {
 }
 
 // ------------------------------------------------------
+// ATHLETENNAME AUS EMAIL
+// ------------------------------------------------------
+
+function getAthleteNameFromEmail(email) {
+  if (!email) return null;
+  const lower = email.toLowerCase();
+  if (lower.startsWith("lasse")) return "Lasse";
+  if (lower.startsWith("tora")) return "Tora";
+  if (lower.startsWith("kerstin")) return "Kerstin";
+  return null;
+}
+
+// ------------------------------------------------------
 // KALENDER RENDERN
 // ------------------------------------------------------
-function renderCalendar() {
 
+function renderCalendar() {
   const monthName = document.getElementById("monthName");
   const calendarGrid = document.getElementById("calendarGrid");
 
@@ -97,7 +133,6 @@ function renderCalendar() {
   }
 
   for (let day = 1; day <= daysInMonth; day++) {
-
     const cell = document.createElement("div");
     cell.classList.add("calendar-day");
 
@@ -139,15 +174,16 @@ function renderCalendar() {
     calendarGrid.appendChild(cell);
   }
 }
-
 // ------------------------------------------------------
-// POPUP
+// POPUP – TRAININGSTAG (ATHLET + PLAN + PRO-ANALYSE)
 // ------------------------------------------------------
-function openDayPopup(dateString) {
 
+async function openDayPopup(dateString) {
+  // Altes Popup entfernen
   const oldPopup = document.querySelector(".apple-popup-overlay");
   if (oldPopup) oldPopup.remove();
 
+  // Overlay + Box
   const overlay = document.createElement("div");
   overlay.classList.add("apple-popup-overlay");
 
@@ -165,13 +201,17 @@ function openDayPopup(dateString) {
   const list = document.createElement("div");
   list.classList.add("apple-popup-content");
 
+  // Trainings für den Tag
   const items = trainings.filter(t => t.date === dateString);
+
+  // ------------------------------------------------------
+  // TRAININGSPLAN ANZEIGEN
+  // ------------------------------------------------------
 
   if (items.length === 0) {
     list.textContent = "Keine Einträge.";
   } else {
     items.forEach(t => {
-
       const line = document.createElement("div");
       line.classList.add("apple-popup-line");
 
@@ -184,7 +224,7 @@ function openDayPopup(dateString) {
 
       list.appendChild(line);
 
-      // ⭐ DOWNLOAD-LINKS (NEU)
+      // Word-Datei Download
       const match = wordFiles.find(w =>
         (w.phase || "").toLowerCase() === (t.phase || "").toLowerCase() &&
         (w.variant || "").toLowerCase() === (t.variant || "").toLowerCase() &&
@@ -192,95 +232,358 @@ function openDayPopup(dateString) {
       );
 
       if (match) {
-        const { data } = supa
-          .storage
-          .from("training-docs")
-          .getPublicUrl(match.file_path);
-
+        const { data } = supa.storage.from("training-docs").getPublicUrl(match.file_path);
         const download = document.createElement("a");
         download.textContent = "Trainingsplan herunterladen";
         download.href = data.publicUrl;
         download.download = match.file_path.split("/").pop();
         download.classList.add("download-link");
-
         list.appendChild(download);
       }
-
     });
   }
 
-  // ⭐ ATHLETEN-ZEITEN
-  if (currentUser.email !== "coach@training.de") {
+  // ------------------------------------------------------
+  // ATHLETEN – ZEITEN EINTRAGEN + PRO-ANALYSE
+  // ------------------------------------------------------
 
+  if (currentUser.email !== "coach@training.de") {
     const divider = document.createElement("hr");
     divider.style.margin = "15px 0";
     list.appendChild(divider);
 
     const label = document.createElement("div");
-    label.textContent = "Zeiten eintragen:";
+    label.textContent = "Training eintragen:";
     label.style.marginBottom = "6px";
     list.appendChild(label);
 
-    const timeContainer = document.createElement("div");
-    timeContainer.id = "timeContainer";
-    list.appendChild(timeContainer);
+    const intervalContainer = document.createElement("div");
+    intervalContainer.id = "intervalContainer";
+    list.appendChild(intervalContainer);
 
-    function addTimeField() {
-      const input = document.createElement("input");
-      input.type = "text";
-      input.placeholder = "z.B. 1:12";
-      input.classList.add("time-input");
-      input.style.width = "100%";
-      input.style.padding = "10px";
-      input.style.borderRadius = "10px";
-      input.style.border = "1px solid #ccc";
-      input.style.marginBottom = "10px";
-      timeContainer.appendChild(input);
+    const sport = items[0]?.sport || "unbekannt";
+    const athlete = getAthleteNameFromEmail(currentUser.email);
+
+    // ------------------------------------------------------
+    // BEREITS GESPEICHERTE INTERVALLE LADEN
+    // ------------------------------------------------------
+
+    const { data: existingTimes } = await supa
+      .from("training_times")
+      .select("*")
+      .eq("date", dateString)
+      .eq("athlete", athlete)
+      .order("interval_index", { ascending: true });
+
+    if (existingTimes && existingTimes.length > 0) {
+      const existingLabel = document.createElement("div");
+      existingLabel.textContent = "Deine bisherigen Intervalle:";
+      existingLabel.style.margin = "10px 0 6px 0";
+      existingLabel.style.fontWeight = "600";
+      list.appendChild(existingLabel);
+
+      let durations = [];
+      let paces = [];
+
+      existingTimes.forEach(t => {
+        const block = document.createElement("div");
+        block.style.padding = "8px";
+        block.style.border = "1px solid #ddd";
+        block.style.borderRadius = "8px";
+        block.style.marginBottom = "6px";
+
+        let html = `<strong>Intervall ${t.interval_index}</strong><br>`;
+
+        if (t.sport === "schwimmen") {
+          html += `Distanz: ${t.distance_meters ?? "-"} m<br>`;
+          html += `Zeit: ${formatSeconds(t.duration_seconds)}<br>`;
+          durations.push(t.duration_seconds);
+        }
+
+        if (t.sport === "lauf") {
+          html += `Dauer: ${formatSeconds(t.duration_seconds)}<br>`;
+          html += `Pace: ${formatSeconds(t.pace_seconds_per_km)} / km<br>`;
+          durations.push(t.duration_seconds);
+          paces.push(t.pace_seconds_per_km);
+        }
+
+        if (t.sport === "rad") {
+          html += `Dauer: ${formatSeconds(t.duration_seconds)}<br>`;
+          html += `Distanz: ${t.distance_meters ?? "-"} m<br>`;
+
+          if (athlete === "Lasse" || athlete === "Kerstin") {
+            html += `Watt: ${t.watt ?? "-"}<br>`;
+          }
+
+          if (athlete === "Tora") {
+            html += `Puls: ${t.heartrate ?? "-"}<br>`;
+          }
+
+          durations.push(t.duration_seconds);
+        }
+
+        block.innerHTML = html;
+
+        // ------------------------------------------------------
+        // LÖSCHEN-BUTTON (FIXED VERSION)
+        // ------------------------------------------------------
+
+        const del = document.createElement("button");
+        del.textContent = "🗑️ löschen";
+        del.style.marginTop = "6px";
+        del.style.background = "#ff3b30";
+        del.style.color = "white";
+        del.style.border = "none";
+        del.style.padding = "6px 10px";
+        del.style.borderRadius = "6px";
+        del.style.cursor = "pointer";
+
+        // WICHTIG: t.id in eine eigene Variable speichern
+        const deleteId = t.id;
+
+        del.onclick = async () => {
+          const { error } = await supa
+            .from("training_times")
+            .delete()
+            .eq("id", deleteId);
+
+          if (error) {
+            console.error(error);
+            alert("Fehler beim Löschen!");
+            return;
+          }
+
+          alert("Intervall gelöscht!");
+          overlay.remove();
+          openDayPopup(dateString);
+        };
+
+        block.appendChild(del);
+        list.appendChild(block);
+        });
+
+
+      // ------------------------------------------------------
+      // ANALYSE
+      // ------------------------------------------------------
+
+      function avg(arr) {
+        return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+      }
+
+      function best(arr) {
+        return arr.length ? Math.min(...arr) : null;
+      }
+
+      const avgDuration = avg(durations);
+      const bestDuration = best(durations);
+      const avgPace = avg(paces);
+      const bestPace = best(paces);
+
+      const analysis = document.createElement("div");
+      analysis.style.padding = "10px";
+      analysis.style.border = "2px solid #007aff";
+      analysis.style.borderRadius = "10px";
+      analysis.style.margin = "15px 0";
+      analysis.style.background = "#f0f7ff";
+
+      let analysisHTML = `<h4>Analyse</h4>`;
+
+      if (durations.length > 0) {
+        analysisHTML += `
+          Durchschnittszeit: <strong>${formatSeconds(Math.round(avgDuration))}</strong><br>
+          Beste Zeit: <strong>${formatSeconds(bestDuration)}</strong><br>
+        `;
+      }
+
+      if (paces.length > 0) {
+        analysisHTML += `
+          Durchschnittspace: <strong>${formatSeconds(Math.round(avgPace))} / km</strong><br>
+          Beste Pace: <strong>${formatSeconds(bestPace)} / km</strong><br>
+        `;
+      }
+
+      // Mini-KI Kommentar
+      let comment = "";
+      if (durations.length >= 3) {
+        const drift = durations[durations.length - 1] - durations[0];
+        if (drift < 3) comment = "Sehr konstant! Du hast das Training super durchgezogen.";
+        else if (drift < 8) comment = "Gute Leistung, leichte Ermüdung sichtbar.";
+        else comment = "Du bist stark gestartet, aber hinten raus müde geworden.";
+      }
+
+      if (comment) analysisHTML += `<br><em>${comment}</em>`;
+
+      analysis.innerHTML = analysisHTML;
+      list.appendChild(analysis);
+
+      const divider2 = document.createElement("hr");
+      divider2.style.margin = "15px 0";
+      list.appendChild(divider2);
     }
 
-    addTimeField();
+    // ------------------------------------------------------
+    // FORMULAR FÜR NEUE INTERVALLE
+    // ------------------------------------------------------
 
-    const addBtn = document.createElement("button");
-    addBtn.textContent = "+ Intervall hinzufügen";
-    addBtn.classList.add("modern-btn");
-    addBtn.style.width = "100%";
-    addBtn.style.marginBottom = "10px";
-    addBtn.onclick = () => addTimeField();
-    list.appendChild(addBtn);
+    function createIntervalForm(index) {
+      const wrapper = document.createElement("div");
+      wrapper.classList.add("interval-block");
+      wrapper.style.padding = "10px";
+      wrapper.style.border = "1px solid #ccc";
+      wrapper.style.borderRadius = "10px";
+      wrapper.style.marginBottom = "10px";
+
+      let html = `<h4>Intervall ${index}</h4>`;
+
+      if (sport === "schwimmen") {
+        html += `
+          <label>Distanz (m):</label>
+          <input class="distanceInput" type="number" placeholder="100">
+
+          <label>Zeit:</label>
+          <input class="timeInput" type="text" placeholder="1:12">
+        `;
+      }
+
+      if (sport === "lauf") {
+        html += `
+          <label>Dauer (Sekunden):</label>
+          <input class="durationInput" type="number" placeholder="180">
+
+          <label>Pace (min/km):</label>
+          <input class="paceInput" type="text" placeholder="4:35">
+        `;
+      }
+
+      if (sport === "rad") {
+        html += `
+          <label>Dauer (Sekunden):</label>
+          <input class="durationInput" type="number" placeholder="180">
+
+          <label>Distanz (optional, m):</label>
+          <input class="distanceInput" type="number" placeholder="1000">
+        `;
+
+        if (athlete === "Lasse" || athlete === "Kerstin") {
+          html += `
+            <label>Watt:</label>
+            <input class="wattInput" type="number" placeholder="220">
+          `;
+        }
+
+        if (athlete === "Tora") {
+          html += `
+            <label>Puls:</label>
+            <input class="heartrateInput" type="number" placeholder="145">
+          `;
+        }
+      }
+
+      wrapper.innerHTML = html;
+      return wrapper;
+    }
+
+    let intervalCount = 1;
+    intervalContainer.appendChild(createIntervalForm(intervalCount));
+
+    const addIntervalBtn = document.createElement("button");
+    addIntervalBtn.textContent = "+ Intervall hinzufügen";
+    addIntervalBtn.classList.add("modern-btn");
+    addIntervalBtn.style.width = "100%";
+    addIntervalBtn.style.marginBottom = "10px";
+
+    addIntervalBtn.onclick = () => {
+      intervalCount++;
+      intervalContainer.appendChild(createIntervalForm(intervalCount));
+    };
+
+    list.appendChild(addIntervalBtn);
+
+    // ------------------------------------------------------
+    // TRAINING NICHT GEMACHT
+    // ------------------------------------------------------
+
+    const notDoneBtn = document.createElement("button");
+    notDoneBtn.textContent = "Training NICHT gemacht";
+    notDoneBtn.classList.add("modern-btn");
+    notDoneBtn.style.width = "100%";
+    notDoneBtn.style.background = "#ff3b30";
+
+    notDoneBtn.onclick = async () => {
+      await supa.from("training_status").insert({
+        date: dateString,
+        athlete: athlete,
+        sport: sport,
+        status: "not_done"
+      });
+
+      alert("Training als NICHT gemacht markiert.");
+      overlay.remove();
+    };
+
+    list.appendChild(notDoneBtn);
+
+    // ------------------------------------------------------
+    // SPEICHERN
+    // ------------------------------------------------------
 
     const saveBtn = document.createElement("button");
-    saveBtn.textContent = "Zeiten speichern";
+    saveBtn.textContent = "Alle neuen Intervalle speichern";
     saveBtn.classList.add("modern-btn");
     saveBtn.style.width = "100%";
 
     saveBtn.onclick = async () => {
-      const inputs = timeContainer.querySelectorAll("input");
-      const sport = items[0]?.sport || "unbekannt";
-
-      let rep = 1;
-      for (const input of inputs) {
-        const timeValue = input.value.trim();
-        if (!timeValue) continue;
-
-        await supa.from("training_times").insert({
-          athlete: currentUser.email,
-          date: dateString,
-          sport: sport,
-          interval: "einfach",
-          rep: rep,
-          time: timeValue
-        });
-
-        rep++;
+      function parseTimeToSeconds(str) {
+        if (!str) return null;
+        const parts = str.split(":");
+        if (parts.length === 2) {
+          return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+        }
+        return null;
       }
 
-      alert("Zeiten gespeichert!");
+      const blocks = intervalContainer.querySelectorAll(".interval-block");
+      let index = (existingTimes?.length || 0) + 1;
+
+      for (const block of blocks) {
+        const distance = block.querySelector(".distanceInput")?.value || null;
+        const time = block.querySelector(".timeInput")?.value || null;
+        const duration = block.querySelector(".durationInput")?.value || null;
+        const pace = block.querySelector(".paceInput")?.value || null;
+        const watt = block.querySelector(".wattInput")?.value || null;
+        const heartrate = block.querySelector(".heartrateInput")?.value || null;
+
+        let durationSeconds = null;
+        if (time) durationSeconds = parseTimeToSeconds(time);
+        else if (duration) durationSeconds = parseInt(duration);
+
+        let paceSeconds = null;
+        if (pace) paceSeconds = parseTimeToSeconds(pace);
+
+        await supa.from("training_times").insert({
+          date: dateString,
+          athlete: athlete,
+          sport: sport,
+          interval_index: index,
+          duration_seconds: durationSeconds,
+          distance_meters: distance ? parseInt(distance) : null,
+          pace_seconds_per_km: paceSeconds,
+          watt: watt ? parseInt(watt) : null,
+          heartrate: heartrate ? parseInt(heartrate) : null
+        });
+
+        index++;
+      }
+
+      alert("Alle Intervalle gespeichert!");
       overlay.remove();
     };
 
     list.appendChild(saveBtn);
   }
 
+  // Popup anzeigen
   box.appendChild(closeBtn);
   box.appendChild(title);
   box.appendChild(list);
@@ -293,9 +596,273 @@ function openDayPopup(dateString) {
   }, 10);
 }
 
+async function openCoachAnalysis(athleteName) {
+  const panel = document.getElementById("coachAnalysis");
+  const title = document.getElementById("coachAnalysisTitle");
+  const content = document.getElementById("coachAnalysisContent");
+
+  panel.classList.remove("hidden");
+  title.textContent = `Analyse für ${athleteName}`;
+  content.innerHTML = "";
+
+  // Daten laden
+  const { data: times } = await supa
+    .from("training_times")
+    .select("*")
+    .eq("athlete", athleteName)
+    .order("date", { ascending: true });
+
+  const { data: status } = await supa
+    .from("training_status")
+    .select("*")
+    .eq("athlete", athleteName);
+
+  const totalTrainings = times.length;
+  const missedTrainings = status.filter(s => s.status === "not_done").length;
+
+  // Kopfzeile
+  content.innerHTML += `
+    <div class="analysis-section">
+      <h2>Überblick</h2>
+      <div class="analysis-grid">
+        <div class="analysis-box"><strong>Trainings:</strong><br>${totalTrainings}</div>
+        <div class="analysis-box"><strong>Nicht gemacht:</strong><br>${missedTrainings}</div>
+        <div class="analysis-box"><strong>Letztes Training:</strong><br>${times.at(-1)?.date || "-"}</div>
+      </div>
+    </div>
+  `;
+
+  // Sportarten trennen
+  const swim = times.filter(t => t.sport === "schwimmen");
+  const run = times.filter(t => t.sport === "lauf");
+  const bike = times.filter(t => t.sport === "rad");
+
+  // Schwimmen Analyse
+  if (swim.length > 0) {
+    const avg100 = Math.round(
+      swim.reduce((a, b) => a + (b.duration_seconds / (b.distance_meters / 100)), 0) / swim.length
+    );
+
+    const best100 = Math.min(
+      ...swim.map(t => t.duration_seconds / (t.distance_meters / 100))
+    );
+
+    content.innerHTML += `
+      <div class="analysis-section">
+        <h2>Schwimmen</h2>
+        <div class="analysis-grid">
+          <div class="analysis-box"><strong>Ø Zeit / 100m:</strong><br>${formatSeconds(avg100)}</div>
+          <div class="analysis-box"><strong>Beste Zeit / 100m:</strong><br>${formatSeconds(best100)}</div>
+          <div class="analysis-box"><strong>Einheiten:</strong><br>${swim.length}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Laufen Analyse
+  if (run.length > 0) {
+    const avgPace = Math.round(
+      run.reduce((a, b) => a + b.pace_seconds_per_km, 0) / run.length
+    );
+
+    const bestPace = Math.min(...run.map(t => t.pace_seconds_per_km));
+
+    content.innerHTML += `
+      <div class="analysis-section">
+        <h2>Laufen</h2>
+        <div class="analysis-grid">
+          <div class="analysis-box"><strong>Ø Pace:</strong><br>${formatSeconds(avgPace)} / km</div>
+          <div class="analysis-box"><strong>Beste Pace:</strong><br>${formatSeconds(bestPace)} / km</div>
+          <div class="analysis-box"><strong>Einheiten:</strong><br>${run.length}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Rad Analyse
+  if (bike.length > 0) {
+    const avgDuration = Math.round(
+      bike.reduce((a, b) => a + b.duration_seconds, 0) / bike.length
+    );
+
+    content.innerHTML += `
+      <div class="analysis-section">
+        <h2>Rad</h2>
+        <div class="analysis-grid">
+          <div class="analysis-box"><strong>Ø Dauer:</strong><br>${formatSeconds(avgDuration)}</div>
+          <div class="analysis-box"><strong>Einheiten:</strong><br>${bike.length}</div>
+          <div class="analysis-box"><strong>Letzte Einheit:</strong><br>${bike.at(-1).date}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Trainingsliste laden
+  loadCoachTrainingList(athleteName);
+  loadCoachCharts(times);
+
+
+// ------------------------------------------------------
+// TRAININGS-LISTE
+// ------------------------------------------------------
+
+async function loadCoachTrainingList(athleteName) {
+  const list = document.getElementById("coachTrainingList");
+  list.innerHTML = "";
+
+  const { data: times } = await supa
+    .from("training_times")
+    .select("*")
+    .eq("athlete", athleteName)
+    .order("date", { ascending: false });
+
+  if (!times || times.length === 0) {
+    list.innerHTML = "<p>Keine Trainings vorhanden.</p>";
+    return;
+  }
+
+  const grouped = {};
+  times.forEach(t => {
+    if (!grouped[t.date]) grouped[t.date] = [];
+    grouped[t.date].push(t);
+  });
+
+  Object.keys(grouped).forEach(date => {
+    const btn = document.createElement("button");
+    btn.classList.add("training-entry");
+
+    const sport = grouped[date][0].sport;
+    const badge =
+      sport === "schwimmen" ? "badge-swim" :
+      sport === "lauf" ? "badge-run" :
+      "badge-bike";
+
+    btn.innerHTML = `
+      <span class="badge ${badge}">${sport}</span>
+      <span style="margin-left:10px;">${date}</span>
+    `;
+
+    btn.onclick = () => openCoachTrainingDetail(athleteName, date);
+    list.appendChild(btn);
+  });
+}
+}
+
+// ------------------------------------------------------
+// TRAINING-DETAILS
+// ------------------------------------------------------
+
+async function openCoachTrainingDetail(athleteName, date) {
+  const detail = document.getElementById("coachTrainingDetail");
+  detail.innerHTML = `<h2>Training am ${date}</h2>`;
+
+  const { data: times } = await supa
+    .from("training_times")
+    .select("*")
+    .eq("athlete", athleteName)
+    .eq("date", date)
+    .order("interval_index", { ascending: true });
+
+  if (!times || times.length === 0) {
+    detail.innerHTML += "<p>Keine Intervalle vorhanden.</p>";
+    return;
+  }
+
+  let html = `
+    <table class="coach-table">
+      <tr>
+        <th>Intervall</th>
+        <th>Dauer</th>
+        <th>Distanz</th>
+        <th>Pace</th>
+        <th>Watt</th>
+        <th>Puls</th>
+      </tr>
+  `;
+
+  times.forEach(t => {
+    html += `
+      <tr>
+        <td>${t.interval_index}</td>
+        <td>${formatSeconds(t.duration_seconds)}</td>
+        <td>${t.distance_meters ?? "-"}</td>
+        <td>${t.pace_seconds_per_km ? formatSeconds(t.pace_seconds_per_km) + "/km" : "-"}</td>
+        <td>${t.watt ?? "-"}</td>
+        <td>${t.heartrate ?? "-"}</td>
+      </tr>
+    `;
+  });
+
+  html += "</table>";
+  detail.innerHTML += html;
+}
+
+
+// ------------------------------------------------------
+// DIAGRAMME
+// ------------------------------------------------------
+
+function loadCoachCharts(times) {
+  const ctx = document.getElementById("coachChart");
+
+  if (!ctx) {
+    console.error("Canvas #coachChart nicht gefunden!");
+    return;
+  }
+
+  if (!times || times.length === 0) return;
+
+  const labels = times.map(t => t.date);
+  const durations = times.map(t => t.duration_seconds);
+
+  new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: "Dauer (Sekunden)",
+        data: durations,
+        borderColor: "#007aff",
+        backgroundColor: "rgba(0,122,255,0.15)",
+        borderWidth: 3,
+        tension: 0.35,
+        fill: true,
+        pointRadius: 4,
+        pointBackgroundColor: "#007aff",
+        pointBorderColor: "#fff",
+        pointBorderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          labels: { font: { size: 16 } }
+        }
+      },
+      scales: {
+        y: { ticks: { font: { size: 14 } } },
+        x: { ticks: { font: { size: 14 } } }
+      }
+    }
+  });
+}
+
+
+// ------------------------------------------------------
+// CLOSE BUTTON
+// ------------------------------------------------------
+
+document.getElementById("coachAnalysisClose").onclick = () => {
+  document.getElementById("coachAnalysis").classList.add("hidden");
+};
+
+
+
 // ------------------------------------------------------
 // MONATSWECHSEL
 // ------------------------------------------------------
+
 document.getElementById("prevMonth").addEventListener("click", () => {
   currentDate.setMonth(currentDate.getMonth() - 1);
   renderCalendar();
@@ -307,10 +874,10 @@ document.getElementById("nextMonth").addEventListener("click", () => {
 });
 
 // ------------------------------------------------------
-// EXCEL IMPORT (Coach)
+// EXCEL IMPORT (Coach) – ALLE MONATE, ROBUST
 // ------------------------------------------------------
-document.getElementById("importExcel").addEventListener("click", () => {
 
+document.getElementById("importExcel").addEventListener("click", () => {
   if (!currentUser || currentUser.email !== "coach@training.de") {
     alert("Nur der Coach darf den Kalender bearbeiten.");
     return;
@@ -321,26 +888,41 @@ document.getElementById("importExcel").addEventListener("click", () => {
   input.accept = ".xlsx";
 
   input.onchange = async (e) => {
-
     const file = e.target.files[0];
     const data = await file.arrayBuffer();
     const workbook = XLSX.read(data);
 
+    // Alte Einträge löschen
     await supa.from("trainings").delete().neq("id", 0);
 
     const inserts = [];
+    const sports = ["schwimmen", "rad", "lauf", "koppel", "freiwasser"];
 
-    workbook.SheetNames.forEach(sheetName => {
-
+    // 🔥 ALLE Tabellenblätter durchgehen
+    for (const sheetName of workbook.SheetNames) {
       const sheet = workbook.Sheets[sheetName];
       const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
 
+      // Leere Sheets überspringen
+      if (rows.length === 0) continue;
+
+      console.log("Importiere Blatt:", sheetName);
+
       rows.forEach(row => {
 
+        // Spaltennamen normalisieren
+        const normalized = {};
+        Object.keys(row).forEach(key => {
+          normalized[key.trim().toLowerCase()] = row[key];
+        });
+
+        // Datum erkennen
         let excelDate =
-          row["Datum"] ||
-          row["__EMPTY"] ||
-          row["__EMPTY_1"];
+          normalized["datum"] ||
+          normalized["date"] ||
+          normalized["tag"] ||
+          normalized["__empty"] ||
+          normalized["__empty_1"];
 
         if (!excelDate) return;
 
@@ -359,25 +941,45 @@ document.getElementById("importExcel").addEventListener("click", () => {
 
         const dateString = `${jsDate.y}-${String(jsDate.m).padStart(2,"0")}-${String(jsDate.d).padStart(2,"0")}`;
 
-        const rawPhase = (row["Trainingsphase"] || "").trim();
-        let phase = rawPhase.split("(")[0].trim();
+        // Trainingsphase
+        const rawPhase = (normalized["trainingsphase"] || "").trim().toLowerCase();
+        const phase = rawPhase.split("(")[0].trim();
 
-        const rawDetail = (row["konkretes Training"] || "").trim();
-        let variant = "";
+        // Konkretes Training
+        const rawDetail = (normalized["konkretes training"] || normalized["training"] || "").trim().toLowerCase();
+
         let sport = "";
+        let variant = "";
 
-        const variantMatch = rawDetail.match(/ChatGPT\s*\d+/i);
-        if (variantMatch) variant = variantMatch[0];
+        const bracketMatch = rawDetail.match(/\((.*?)\)/);
+        let inside = bracketMatch ? bracketMatch[1].trim() : "";
 
-        const sportPart = rawDetail.split(")").pop().trim();
-        if (sportPart) sport = sportPart;
+        if (sports.some(s => inside.includes(s))) {
+          sport = sports.find(s => inside.includes(s));
+        } else if (inside.includes("chatgpt")) {
+          variant = inside;
+        }
 
-        ["Lasse","Tora","Kerstin"].forEach(name => {
-          if (row[name] && row[name].trim() !== "") {
+        const before = rawDetail.split("(")[0].trim();
+
+        if (!variant) {
+          const vMatch = before.match(/chatgpt\s*\d+/i);
+          if (vMatch) variant = vMatch[0].toLowerCase();
+        }
+
+        if (!sport) {
+          const sMatch = sports.find(s => before.includes(s));
+          if (sMatch) sport = sMatch;
+        }
+
+        // Athleten
+        ["lasse","tora","kerstin"].forEach(name => {
+          const value = normalized[name];
+          if (value && value.trim() !== "") {
             inserts.push({
               date: dateString,
-              athlete: name,
-              training: row[name],
+              athlete: name.charAt(0).toUpperCase() + name.slice(1),
+              training: value,
               phase: phase,
               variant: variant,
               sport: sport
@@ -385,6 +987,7 @@ document.getElementById("importExcel").addEventListener("click", () => {
           }
         });
 
+        // Phase-Eintrag
         inserts.push({
           date: dateString,
           athlete: "Phase",
@@ -393,10 +996,10 @@ document.getElementById("importExcel").addEventListener("click", () => {
           variant: variant,
           sport: sport
         });
-
       });
-    });
+    }
 
+    // Alles speichern
     if (inserts.length > 0) {
       await supa.from("trainings").insert(inserts);
     }
@@ -409,11 +1012,12 @@ document.getElementById("importExcel").addEventListener("click", () => {
   input.click();
 });
 
+
 // ------------------------------------------------------
 // WORD IMPORT (Coach)
 // ------------------------------------------------------
-document.getElementById("importDocs").addEventListener("click", () => {
 
+document.getElementById("importDocs").addEventListener("click", () => {
   if (!currentUser || currentUser.email !== "coach@training.de") {
     alert("Nur der Coach darf Word-Dateien importieren.");
     return;
@@ -425,19 +1029,15 @@ document.getElementById("importDocs").addEventListener("click", () => {
   input.multiple = true;
 
   input.onchange = async (e) => {
-
     const files = Array.from(e.target.files);
     const inserts = [];
 
     for (const file of files) {
-
       const name = file.name.replace(".docx", "").trim();
 
       const phase = name.split("(")[0].trim();
-
       const variantMatch = name.match(/ChatGPT\s*\d+/i);
       const variant = variantMatch ? variantMatch[0] : "";
-
       const sport = name.split(")").pop().trim();
 
       const filePath = `${Date.now()}-${file.name}`;

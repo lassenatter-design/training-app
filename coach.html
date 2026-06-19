@@ -25,6 +25,9 @@
     }
     protectPage();
   </script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+
 </head>
 
 <body class="apple-body">
@@ -32,13 +35,53 @@
   <header class="apple-header">
     <h1>Trainingsbereich</h1>
   <div id="coachAthleteButtons" class="athlete-buttons">
-  <button class="athlete-btn" data-athlete="Lasse">Lasse</button>
-  <button class="athlete-btn" data-athlete="Tora">Tora</button>
-  <button class="athlete-btn" data-athlete="Kerstin">Kerstin</button>
+ <button class="athlete-btn" onclick="openCoachAnalysis('Lasse')">
+  <div class="athlete-btn-icon">🏊‍♂️</div>
+  Lasse
+</button>
+
+<button class="athlete-btn" onclick="openCoachAnalysis('Tora')">
+  <div class="athlete-btn-icon">🚴‍♀️</div>
+  Tora
+</button>
+
+<button class="athlete-btn" onclick="openCoachAnalysis('Kerstin')">
+  <div class="athlete-btn-icon">🏃‍♀️</div>
+  Kerstin
+</button>
+
+<div id="coachAnalysis" class="coach-analysis hidden">
+  <div class="coach-analysis-header">
+    <h1 id="coachAnalysisTitle"></h1>
+    <button id="coachAnalysisClose" class="close-btn">×</button>
   </div>
 
+  <div id="coachAnalysisContent"></div>
 
-    <button onclick="logout()" class="logout-btn">Logout</button>
+  <h2>Trainings</h2>
+  <div id="coachTrainingList"></div>
+
+  <h2>Training Details</h2>
+  <div id="coachTrainingDetail"></div>
+
+  <h2>Diagramme</h2>
+  <canvas id="coachChart" height="120"></canvas>
+  <h2>Trainings</h2>
+<div id="coachTrainingList"></div>
+
+<h2>Training Details</h2>
+<div id="coachTrainingDetail"></div>
+
+<h2>Diagramme</h2>
+<canvas id="coachChart" height="120"></canvas>
+
+</div>
+
+
+
+
+    <button class="logout-btn" onclick="logout()">🚪 Logout</button>
+
 
     <script>
       async function logout() {
