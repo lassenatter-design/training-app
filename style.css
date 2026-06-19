@@ -1086,3 +1086,52 @@ button, .import-btn, .month-btn, .training-entry, .logout-btn {
   font-size: 12px !important;
   line-height: 1.2 !important;
 }
+/* --- SAFARI FIX: Eltern-Container darf Grid NICHT quetschen --- */
+.apple-card {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  overflow: visible !important;
+}
+
+/* --- SAFARI FIX: Kalender selbst darf NICHT breiter werden --- */
+.calendar-grid {
+  width: 100% !important;
+  max-width: 100% !important;
+  grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+}
+
+/* --- SAFARI FIX: Zellen dürfen NICHT wachsen --- */
+.calendar-day {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow-wrap: break-word !important;
+  word-break: break-word !important;
+  white-space: normal !important;
+}
+/* --- SAFARI FIX: Eltern-Container darf Grid NICHT quetschen --- */
+.apple-card {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  overflow: visible !important;
+}
+
+/* --- SAFARI FIX: Kalender darf NIE umbrechen --- */
+.calendar-grid {
+  display: grid !important;
+  grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* --- SAFARI FIX: Zellen dürfen NICHT wachsen --- */
+.calendar-day {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow-wrap: break-word !important;
+  word-break: break-word !important;
+  white-space: normal !important;
+}

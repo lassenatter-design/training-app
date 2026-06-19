@@ -225,11 +225,12 @@ async function openDayPopup(dateString) {
       list.appendChild(line);
 
       // Word-Datei Download
-      const match = wordFiles.find(w =>
-        (w.phase || "").toLowerCase() === (t.phase || "").toLowerCase() &&
-        (w.variant || "").toLowerCase() === (t.variant || "").toLowerCase() &&
-        (t.sport || "").toLowerCase().includes((w.sport || "").toLowerCase())
-      );
+      const match = 
+      (t.phase || "").trim().toLowerCase() === (w.phase || "").trim().toLowerCase() &&
+      (t.variant || "").trim().toLowerCase() === (w.variant || "").trim().toLowerCase() &&
+      (t.sport || "").trim().toLowerCase() === (w.sport || "").trim().toLowerCase();
+
+      
 
       if (match) {
         const { data } = supa.storage.from("training-docs").getPublicUrl(match.file_path);
@@ -331,7 +332,7 @@ async function openDayPopup(dateString) {
         const del = document.createElement("button");
         del.textContent = "🗑️ löschen";
         del.style.marginTop = "6px";
-        del.style.background = "#ff3b30";
+        del.style.background = "#007aff";
         del.style.color = "white";
         del.style.border = "none";
         del.style.padding = "6px 10px";
@@ -508,7 +509,7 @@ async function openDayPopup(dateString) {
     notDoneBtn.textContent = "Training NICHT gemacht";
     notDoneBtn.classList.add("modern-btn");
     notDoneBtn.style.width = "100%";
-    notDoneBtn.style.background = "#ff3b30";
+    notDoneBtn.style.background = "#007aff";
 
     notDoneBtn.onclick = async () => {
       await supa.from("training_status").insert({
