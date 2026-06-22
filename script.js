@@ -20,36 +20,42 @@ function formatSeconds(sec) {
 // ------------------------------------------------------
 
 async function init() {
+  // User laden
   const { data: userData } = await supa.auth.getUser();
-  currentUser = userData?.user || null;
+  const user = userData?.user;
 
-  if (!currentUser) {
+  if (!user) {
     window.location.href = "index.html";
     return;
   }
 
-  await loadTrainings();
-  await loadWordFiles();
+  const isCoach = user.email === "coach@training.de";
 
-  const isCoach = currentUser.email === "coach@training.de";
+  // --- COACH-ONLY ELEMENTE ---
+  const coachOnly = document.querySelectorAll(".coach-only");
+
+  if (isCoach) {
+    coachOnly.forEach(el => el.style.display = "inline-block");
+  } else {
+    coachOnly.forEach(el => el.style.display = "none");
+  }
+
+  // --- COACH-ATHLETEN-BUTTONS ---
   const athleteButtons = document.getElementById("coachAthleteButtons");
-
   if (!isCoach && athleteButtons) {
     athleteButtons.style.display = "none";
   }
 
-  const importExcelBtn = document.getElementById("importExcel");
-  const importDocsBtn = document.getElementById("importDocs");
+  // --- DATEN LADEN ---
+  await loadTrainings();   // wichtig: MUSS vor renderCalendar laufen
+  await loadWordFiles();
 
-  if (!isCoach) {
-    if (importExcelBtn) importExcelBtn.style.display = "none";
-    if (importDocsBtn) importDocsBtn.style.display = "none";
-  }
-
+  // --- KALENDER RENDERN ---
   renderCalendar();
 }
 
 window.addEventListener("load", init);
+
 
 // ------------------------------------------------------
 // TRAININGS LADEN
@@ -225,25 +231,51 @@ async function openDayPopup(dateString) {
       list.appendChild(line);
 
       // Word-Datei Download
-      const match = 
-      (t.phase || "").trim().toLowerCase() === (w.phase || "").trim().toLowerCase() &&
-      (t.variant || "").trim().toLowerCase() === (w.variant || "").trim().toLowerCase() &&
-      (t.sport || "").trim().toLowerCase() === (w.sport || "").trim().toLowerCase();
+      let downloadAdded = false;
 
-      
+wordFiles.forEach(w => {
+  if (downloadAdded) return;
 
-      if (match) {
-        const { data } = supa.storage.from("training-docs").getPublicUrl(match.file_path);
-        const download = document.createElement("a");
-        download.textContent = "Trainingsplan herunterladen";
-        download.href = data.publicUrl;
-        download.download = match.file_path.split("/").pop();
-        download.classList.add("download-link");
-        list.appendChild(download);
-      }
-    });
+  if ((t.athlete || "").toLowerCase() === "phase") return;
+
+  const normalize = str =>
+    (str || "")
+      .toLowerCase()
+      .replace(/\s+/g, "")
+      .replace(/[^a-z0-9]/g, "");
+
+  const trainingPhase   = normalize(t.phase);
+  const trainingSport   = normalize(t.sport);
+  const trainingVariant = normalize(t.variant);
+
+  const wordPhase   = normalize(w.phase);
+  const wordSport   = normalize(w.sport);
+  const wordVariant = normalize(w.variant);
+
+  const phaseMatch   = trainingPhase.includes(wordPhase) || wordPhase.includes(trainingPhase);
+  const sportMatch   = trainingSport.includes(wordSport) || wordSport.includes(trainingSport);
+  const variantMatch = trainingVariant.includes(wordVariant) || wordVariant.includes(trainingVariant);
+
+  if (phaseMatch && sportMatch && variantMatch) {
+    const { data } = supa.storage
+      .from("training-docs")
+      .getPublicUrl(w.file_path);
+
+    const download = document.createElement("a");
+    download.textContent = "Trainingsplan herunterladen";
+    download.href = data.publicUrl;
+    download.download = w.file_path.split("/").pop();
+    download.classList.add("download-link");
+
+    list.appendChild(download);
+    downloadAdded = true;
   }
+});
 
+
+
+ })
+}
   // ------------------------------------------------------
   // ATHLETEN – ZEITEN EINTRAGEN + PRO-ANALYSE
   // ------------------------------------------------------
@@ -1006,8 +1038,15 @@ document.getElementById("importExcel").addEventListener("click", () => {
     }
 
     await loadTrainings();
-    renderCalendar();
-    alert("Excel erfolgreich importiert!");
+await loadWordFiles();
+
+// HIER GENAU
+console.log("Training Beispiel:", trainings[0]);
+console.log("Word Beispiel:", wordFiles[0]);
+
+renderCalendar();
+
+
   };
 
   input.click();

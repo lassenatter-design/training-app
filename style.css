@@ -1,3 +1,9 @@
+.coach-only {
+  display: none !important;
+}
+
+
+
 html, body {
   height: auto;
   overflow-y: auto;
@@ -1134,4 +1140,47 @@ button, .import-btn, .month-btn, .training-entry, .logout-btn {
   overflow-wrap: break-word !important;
   word-break: break-word !important;
   white-space: normal !important;
+}
+/* MOBILE: Kalender auf 3 Spalten reduzieren */
+@media (max-width: 600px) {
+  .calendar-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+/* --- SAFARI FIX: Elterncontainer darf Grid NICHT quetschen --- */
+.apple-card, .calendar-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  overflow: visible !important;
+}
+
+/* --- SAFARI FIX: Grid darf NIE umbrechen --- */
+.calendar-grid {
+  display: grid !important;
+  grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* --- MOBILE: 3 Spalten statt 7 --- */
+@media (max-width: 600px) {
+  .calendar-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+.training-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: #f5f5f7;
+  margin-bottom: 6px;
+  height: auto;
+}
+
+.training-entry.active {
+  background: #e0e0e0;
 }
