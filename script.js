@@ -1,13 +1,19 @@
 // ------------------------------------------------------
 // GLOBAL STATE
 // ------------------------------------------------------
-
 let currentUser = null;
 let trainings = [];
 let wordFiles = [];
 let currentDate = new Date();
 
-// Zeitformatierung
+// WICHTIG: globale Flags
+let isCoach = false;
+let currentAthleteName = null;
+
+
+// ------------------------------------------------------
+// ZEITFORMATIERUNG
+// ------------------------------------------------------
 function formatSeconds(sec) {
   if (sec === null || sec === undefined) return "-";
   const m = Math.floor(sec / 60);
@@ -15,51 +21,16 @@ function formatSeconds(sec) {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-// ------------------------------------------------------
-// INIT
-// ------------------------------------------------------
 
-async function init() {
-  // User laden
-  const { data: userData } = await supa.auth.getUser();
-  const user = userData?.user;
 
-  if (!user) {
-    window.location.href = "index.html";
-    return;
-  }
-
-  const isCoach = user.email === "coach@training.de";
-
-  // --- COACH-ONLY ELEMENTE ---
-  const coachOnly = document.querySelectorAll(".coach-only");
-
-  if (isCoach) {
-    coachOnly.forEach(el => el.style.display = "inline-block");
-  } else {
-    coachOnly.forEach(el => el.style.display = "none");
-  }
-
-  // --- COACH-ATHLETEN-BUTTONS ---
-  const athleteButtons = document.getElementById("coachAthleteButtons");
-  if (!isCoach && athleteButtons) {
-    athleteButtons.style.display = "none";
-  }
-
-  // --- DATEN LADEN ---
-  await loadTrainings();   // wichtig: MUSS vor renderCalendar laufen
-  await loadWordFiles();
-
-  // --- KALENDER RENDERN ---
-  renderCalendar();
-}
-
-window.addEventListener("load", init);
 
 
 // ------------------------------------------------------
 // TRAININGS LADEN
 // ------------------------------------------------------
+let allTrainings = [];
+
+
 
 async function loadTrainings() {
   const { data, error } = await supa
@@ -68,24 +39,35 @@ async function loadTrainings() {
     .order("date", { ascending: true });
 
   if (error) {
-    console.error("Fehler beim Laden der Trainings:", error);
-    trainings = [];
+    console.error(error);
     return;
   }
 
-  if (currentUser.email === "coach@training.de") {
-    trainings = data || [];
-    return;
-  }
-
-  const athlete = getAthleteNameFromEmail(currentUser.email);
-  trainings = (data || []).filter(t => t.athlete === athlete);
+  allTrainings = data;  // <-- WICHTIG!!!
+  console.log("Trainings geladen:", allTrainings.length);
 }
+function formatExcelDate(value) {
+  if (!value) return null;
+
+  if (typeof value === "number") {
+    const date = XLSX.SSF.parse_date_code(value);
+    return `${date.y}-${String(date.m).padStart(2, "0")}-${String(date.d).padStart(2, "0")}`;
+  }
+
+  if (typeof value === "string") {
+    const d = new Date(value);
+    if (!isNaN(d)) {
+      return d.toISOString().split("T")[0];
+    }
+  }
+
+  return null;
+}
+
 
 // ------------------------------------------------------
 // WORD-DATEIEN LADEN
 // ------------------------------------------------------
-
 async function loadWordFiles() {
   const { data } = await supa
     .from("word_files")
@@ -95,10 +77,10 @@ async function loadWordFiles() {
   wordFiles = data || [];
 }
 
+
 // ------------------------------------------------------
 // ATHLETENNAME AUS EMAIL
 // ------------------------------------------------------
-
 function getAthleteNameFromEmail(email) {
   if (!email) return null;
   const lower = email.toLowerCase();
@@ -108,10 +90,10 @@ function getAthleteNameFromEmail(email) {
   return null;
 }
 
+
 // ------------------------------------------------------
 // KALENDER RENDERN
 // ------------------------------------------------------
-
 function renderCalendar() {
   const monthName = document.getElementById("monthName");
   const calendarGrid = document.getElementById("calendarGrid");
@@ -148,9 +130,19 @@ function renderCalendar() {
     cell.appendChild(number);
 
     const dateString = `${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
-    const dayTrainings = trainings.filter(t => t.date === dateString);
+    const dayTrainings = allTrainings.filter(t => t.date === dateString);
 
-    dayTrainings.forEach(t => {
+      const visibleTrainings = isCoach
+  ? dayTrainings
+  : dayTrainings.filter(t =>
+      t.athlete &&
+      t.athlete.trim().toLowerCase() === currentAthleteName.trim().toLowerCase() ||
+      t.athlete === "Phase"
+    );
+
+
+
+    visibleTrainings.forEach(t => {
       if (t.athlete !== "Phase") {
         const label = document.createElement("div");
         label.classList.add("calendar-day-training");
@@ -165,7 +157,7 @@ function renderCalendar() {
       }
     });
 
-    const phaseForDay = dayTrainings.find(t => t.athlete === "Phase");
+    const phaseForDay = visibleTrainings.find(t => t.athlete === "Phase");
     if (phaseForDay) {
       const phaseLabel = document.createElement("div");
       phaseLabel.classList.add("calendar-day-training");
@@ -181,15 +173,125 @@ function renderCalendar() {
   }
 }
 // ------------------------------------------------------
+// COACH: NEUEN ATHLETEN ERSTELLEN + TRAININGS KOPIEREN
+// ------------------------------------------------------
+
+document.getElementById("createUserSubmit").onclick = async () => {
+  const email = document.getElementById("newUserEmail").value;
+  const password = document.getElementById("newUserPassword").value;
+  const sourceAthlete = document.getElementById("newUserSource").value;
+  const newAthleteName = document.getElementById("newUserAthleteName").value;
+
+  if (!email || !password || !newAthleteName) {
+    alert("Bitte Email, Passwort und neuen Athletennamen eingeben.");
+    return;
+  }
+
+  // 1. Benutzer erstellen
+  const { data, error } = await supa.auth.signUp({
+    email: email,
+    password: password,
+    options: {
+      email_confirm: true
+    }
+  });
+
+  if (error) {
+    console.error(error);
+    alert("Fehler beim Erstellen des Benutzers.");
+    return;
+  }
+
+  const newUserId = data.user.id;
+
+  // 2. Profil speichern
+  await supa.from("profiles").insert({
+    id: newUserId,
+    email: email,
+    athlete_name: newAthleteName
+  });
+
+  // 3. Trainings vom Quellathleten kopieren
+  const { data: sourceTrainings } = await supa
+    .from("trainings")
+    .select("*")
+    .eq("athlete", sourceAthlete);
+
+  if (sourceTrainings && sourceTrainings.length > 0) {
+    const copied = sourceTrainings.map(t => ({
+      date: t.date,
+      athlete: newAthleteName,
+      training: t.training,
+      phase: t.phase,
+      variant: t.variant,
+      sport: t.sport
+    }));
+
+    await supa.from("trainings").insert(copied);
+  }
+
+  alert("Athlet erfolgreich erstellt! Trainings wurden übernommen.");
+};
+
+document.getElementById("deleteAthleteBtn").onclick = async () => {
+  const name = prompt("Welchen Athleten möchtest du löschen? (Name genau eingeben)");
+
+  if (!name) return;
+
+  if (!confirm(`Soll der Athlet "${name}" wirklich gelöscht werden?`)) return;
+
+  await deleteAthlete(name);
+};
+async function deleteAthlete(name) {
+  // 1. Trainings löschen
+  const { error: tError } = await supa
+    .from("trainings")
+    .delete()
+    .eq("athlete", name);
+
+  if (tError) {
+    console.error(tError);
+    alert("Fehler beim Löschen der Trainings.");
+    return;
+  }
+
+  // 2. Profil löschen
+  const { error: pError } = await supa
+    .from("profiles")
+    .delete()
+    .eq("athlete_name", name);
+
+  if (pError) {
+    console.error(pError);
+    alert("Fehler beim Löschen des Profils.");
+    return;
+  }
+
+  alert(`Athlet "${name}" wurde erfolgreich gelöscht.`);
+
+  await loadTrainings();
+  renderCalendar();
+}
+
+
+
+
+// ------------------------------------------------------
+// WICHTIG: INIT STARTEN
+// ------------------------------------------------------
+window.addEventListener("load", init);
+
+
+// ------------------------------------------------------
 // POPUP – TRAININGSTAG (ATHLET + PLAN + PRO-ANALYSE)
 // ------------------------------------------------------
 
 async function openDayPopup(dateString) {
-  // Altes Popup entfernen
+  
+
   const oldPopup = document.querySelector(".apple-popup-overlay");
   if (oldPopup) oldPopup.remove();
 
-  // Overlay + Box
   const overlay = document.createElement("div");
   overlay.classList.add("apple-popup-overlay");
 
@@ -207,8 +309,15 @@ async function openDayPopup(dateString) {
   const list = document.createElement("div");
   list.classList.add("apple-popup-content");
 
-  // Trainings für den Tag
-  const items = trainings.filter(t => t.date === dateString);
+  const allItems = allTrainings.filter(t => t.date === dateString);
+
+  const items = isCoach
+  ? allItems
+  : allItems.filter(t =>
+      t.athlete &&
+      t.athlete.trim().toLowerCase() === currentAthleteName.trim().toLowerCase() ||
+      t.athlete === "Phase"
+    );
 
   // ------------------------------------------------------
   // TRAININGSPLAN ANZEIGEN
@@ -218,6 +327,33 @@ async function openDayPopup(dateString) {
     list.textContent = "Keine Einträge.";
   } else {
     items.forEach(t => {
+      const parsed = parseTraining(t.training);
+
+      t.sport = parsed.sport;
+      t.variant = parsed.variant;
+      t.phase = parsed.phase || t.phase; // Phase aus Excel bleibt fallback
+      t.cleanTraining = parsed.clean;
+
+      // VARIANTE AUTOMATISCH ERKENNEN
+      const detectVariant = (str) => {
+        const match = str.match(/\((.*?)\)/);
+        return match ? match[1].trim() : "";
+      };
+
+      t.variant = detectVariant(t.training);
+
+      // SPORT AUTOMATISCH ERKENNEN
+      const detectSport = (str) => {
+        const s = str.toLowerCase();
+        if (s.includes("lauf")) return "lauf";
+        if (s.includes("schwimm")) return "schwimmen";
+        if (s.includes("rad")) return "rad";
+        if (s.includes("koppel")) return "koppel";
+        return "";
+      };
+
+      t.sport = detectSport(t.training);
+
       const line = document.createElement("div");
       line.classList.add("apple-popup-line");
 
@@ -230,31 +366,73 @@ async function openDayPopup(dateString) {
 
       list.appendChild(line);
 
-      // Word-Datei Download
+      // ------------------------------------------------------
+      // WORD-DATEI MATCHING
+      // ------------------------------------------------------
+      // TRAINING PARSER
+      function parseTraining(str) {
+        const result = {
+          phase: "",
+          variant: "",
+          sport: "",
+          clean: str
+        };
+
+        if (!str) return result;
+
+        const lower = str.toLowerCase();
+
+        // Phase erkennen (Aufbau 1, Aufbau 2, Grundlagen 1, etc.)
+        const phaseMatch = lower.match(/(aufbau|grundlagen|höchst|wettkampf)\s*\d*/);
+        if (phaseMatch) {
+          result.phase = phaseMatch[0].replace(/\s+/g, "");
+        }
+
+        // Variante erkennen (ChatGPT 1, ChatGPT 2, ChatGPT 4…)
+        const variantMatch = lower.match(/chatgpt\s*\d+/);
+        if (variantMatch) {
+          result.variant = variantMatch[0].replace(/\s+/g, "");
+        }
+
+        // Sport erkennen
+        if (lower.includes("schwimm")) result.sport = "schwimmen";
+        if (lower.includes("lauf")) result.sport = "laufen";
+        if (lower.includes("rad")) result.sport = "rad";
+
+        // Clean Training (alles ohne Klammern)
+        result.clean = str.replace(/\(.*?\)/g, "").trim();
+
+        return result;
+      }
+
       let downloadAdded = false;
 
 wordFiles.forEach(w => {
   if (downloadAdded) return;
-
   if ((t.athlete || "").toLowerCase() === "phase") return;
 
-  const normalize = str =>
+  const normalize = (str) =>
     (str || "")
       .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
       .replace(/\s+/g, "")
       .replace(/[^a-z0-9]/g, "");
 
-  const trainingPhase   = normalize(t.phase);
-  const trainingSport   = normalize(t.sport);
-  const trainingVariant = normalize(t.variant);
+  // Training parsen
+  const parsed = parseTraining(t.training);
 
-  const wordPhase   = normalize(w.phase);
-  const wordSport   = normalize(w.sport);
+  const trainingPhase = normalize(parsed.phase || t.phase);
+  const trainingSport = normalize(parsed.sport);
+  const trainingVariant = normalize(parsed.variant);
+
+  const wordPhase = normalize(w.phase);
+  const wordSport = normalize(w.sport);
   const wordVariant = normalize(w.variant);
 
-  const phaseMatch   = trainingPhase.includes(wordPhase) || wordPhase.includes(trainingPhase);
-  const sportMatch   = trainingSport.includes(wordSport) || wordSport.includes(trainingSport);
-  const variantMatch = trainingVariant.includes(wordVariant) || wordVariant.includes(trainingVariant);
+  const phaseMatch = trainingPhase === wordPhase;
+  const sportMatch = trainingSport === wordSport;
+  const variantMatch = trainingVariant === wordVariant;
 
   if (phaseMatch && sportMatch && variantMatch) {
     const { data } = supa.storage
@@ -272,15 +450,17 @@ wordFiles.forEach(w => {
   }
 });
 
+    });
+    
 
+  }
 
- })
-}
   // ------------------------------------------------------
   // ATHLETEN – ZEITEN EINTRAGEN + PRO-ANALYSE
   // ------------------------------------------------------
 
   if (currentUser.email !== "coach@training.de") {
+
     const divider = document.createElement("hr");
     divider.style.margin = "15px 0";
     list.appendChild(divider);
@@ -309,6 +489,7 @@ wordFiles.forEach(w => {
       .order("interval_index", { ascending: true });
 
     if (existingTimes && existingTimes.length > 0) {
+
       const existingLabel = document.createElement("div");
       existingLabel.textContent = "Deine bisherigen Intervalle:";
       existingLabel.style.margin = "10px 0 6px 0";
@@ -343,22 +524,19 @@ wordFiles.forEach(w => {
         if (t.sport === "rad") {
           html += `Dauer: ${formatSeconds(t.duration_seconds)}<br>`;
           html += `Distanz: ${t.distance_meters ?? "-"} m<br>`;
-
           if (athlete === "Lasse" || athlete === "Kerstin") {
             html += `Watt: ${t.watt ?? "-"}<br>`;
           }
-
           if (athlete === "Tora") {
             html += `Puls: ${t.heartrate ?? "-"}<br>`;
           }
-
           durations.push(t.duration_seconds);
         }
 
         block.innerHTML = html;
 
         // ------------------------------------------------------
-        // LÖSCHEN-BUTTON (FIXED VERSION)
+        // LÖSCHEN-BUTTON
         // ------------------------------------------------------
 
         const del = document.createElement("button");
@@ -371,7 +549,6 @@ wordFiles.forEach(w => {
         del.style.borderRadius = "6px";
         del.style.cursor = "pointer";
 
-        // WICHTIG: t.id in eine eigene Variable speichern
         const deleteId = t.id;
 
         del.onclick = async () => {
@@ -393,8 +570,7 @@ wordFiles.forEach(w => {
 
         block.appendChild(del);
         list.appendChild(block);
-        });
-
+      });
 
       // ------------------------------------------------------
       // ANALYSE
@@ -436,7 +612,6 @@ wordFiles.forEach(w => {
         `;
       }
 
-      // Mini-KI Kommentar
       let comment = "";
       if (durations.length >= 3) {
         const drift = durations[durations.length - 1] - durations[0];
@@ -567,6 +742,7 @@ wordFiles.forEach(w => {
     saveBtn.style.width = "100%";
 
     saveBtn.onclick = async () => {
+
       function parseTimeToSeconds(str) {
         if (!str) return null;
         const parts = str.split(":");
@@ -628,6 +804,9 @@ wordFiles.forEach(w => {
     box.classList.add("visible");
   }, 10);
 }
+// ------------------------------------------------------
+// COACH-ANALYSE ÖFFNEN
+// ------------------------------------------------------
 
 async function openCoachAnalysis(athleteName) {
   const panel = document.getElementById("coachAnalysis");
@@ -670,7 +849,10 @@ async function openCoachAnalysis(athleteName) {
   const run = times.filter(t => t.sport === "lauf");
   const bike = times.filter(t => t.sport === "rad");
 
-  // Schwimmen Analyse
+  // ------------------------------------------------------
+  // SCHWIMMEN ANALYSE
+  // ------------------------------------------------------
+
   if (swim.length > 0) {
     const avg100 = Math.round(
       swim.reduce((a, b) => a + (b.duration_seconds / (b.distance_meters / 100)), 0) / swim.length
@@ -692,7 +874,10 @@ async function openCoachAnalysis(athleteName) {
     `;
   }
 
-  // Laufen Analyse
+  // ------------------------------------------------------
+  // LAUFEN ANALYSE
+  // ------------------------------------------------------
+
   if (run.length > 0) {
     const avgPace = Math.round(
       run.reduce((a, b) => a + b.pace_seconds_per_km, 0) / run.length
@@ -712,7 +897,10 @@ async function openCoachAnalysis(athleteName) {
     `;
   }
 
-  // Rad Analyse
+  // ------------------------------------------------------
+  // RAD ANALYSE
+  // ------------------------------------------------------
+
   if (bike.length > 0) {
     const avgDuration = Math.round(
       bike.reduce((a, b) => a + b.duration_seconds, 0) / bike.length
@@ -732,11 +920,13 @@ async function openCoachAnalysis(athleteName) {
 
   // Trainingsliste laden
   loadCoachTrainingList(athleteName);
-  loadCoachCharts(times);
 
+  // Diagramme laden
+  loadCoachCharts(times);
+}
 
 // ------------------------------------------------------
-// TRAININGS-LISTE
+// TRAININGS-LISTE (Coach)
 // ------------------------------------------------------
 
 async function loadCoachTrainingList(athleteName) {
@@ -755,6 +945,7 @@ async function loadCoachTrainingList(athleteName) {
   }
 
   const grouped = {};
+
   times.forEach(t => {
     if (!grouped[t.date]) grouped[t.date] = [];
     grouped[t.date].push(t);
@@ -765,6 +956,7 @@ async function loadCoachTrainingList(athleteName) {
     btn.classList.add("training-entry");
 
     const sport = grouped[date][0].sport;
+
     const badge =
       sport === "schwimmen" ? "badge-swim" :
       sport === "lauf" ? "badge-run" :
@@ -779,10 +971,9 @@ async function loadCoachTrainingList(athleteName) {
     list.appendChild(btn);
   });
 }
-}
 
 // ------------------------------------------------------
-// TRAINING-DETAILS
+// TRAINING-DETAILS (Coach)
 // ------------------------------------------------------
 
 async function openCoachTrainingDetail(athleteName, date) {
@@ -831,56 +1022,6 @@ async function openCoachTrainingDetail(athleteName, date) {
 }
 
 
-// ------------------------------------------------------
-// DIAGRAMME
-// ------------------------------------------------------
-
-function loadCoachCharts(times) {
-  const ctx = document.getElementById("coachChart");
-
-  if (!ctx) {
-    console.error("Canvas #coachChart nicht gefunden!");
-    return;
-  }
-
-  if (!times || times.length === 0) return;
-
-  const labels = times.map(t => t.date);
-  const durations = times.map(t => t.duration_seconds);
-
-  new Chart(ctx, {
-    type: "line",
-    data: {
-      labels: labels,
-      datasets: [{
-        label: "Dauer (Sekunden)",
-        data: durations,
-        borderColor: "#007aff",
-        backgroundColor: "rgba(0,122,255,0.15)",
-        borderWidth: 3,
-        tension: 0.35,
-        fill: true,
-        pointRadius: 4,
-        pointBackgroundColor: "#007aff",
-        pointBorderColor: "#fff",
-        pointBorderWidth: 2
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: {
-          labels: { font: { size: 16 } }
-        }
-      },
-      scales: {
-        y: { ticks: { font: { size: 14 } } },
-        x: { ticks: { font: { size: 14 } } }
-      }
-    }
-  });
-}
-
 
 // ------------------------------------------------------
 // CLOSE BUTTON
@@ -889,9 +1030,6 @@ function loadCoachCharts(times) {
 document.getElementById("coachAnalysisClose").onclick = () => {
   document.getElementById("coachAnalysis").classList.add("hidden");
 };
-
-
-
 // ------------------------------------------------------
 // MONATSWECHSEL
 // ------------------------------------------------------
@@ -906,155 +1044,81 @@ document.getElementById("nextMonth").addEventListener("click", () => {
   renderCalendar();
 });
 
+
 // ------------------------------------------------------
-// EXCEL IMPORT (Coach) – ALLE MONATE, ROBUST
+// EXCEL IMPORT (Coach) – FUNKTIONIERT
 // ------------------------------------------------------
 
-document.getElementById("importExcel").addEventListener("click", () => {
-  if (!currentUser || currentUser.email !== "coach@training.de") {
-    alert("Nur der Coach darf den Kalender bearbeiten.");
-    return;
-  }
+document.getElementById("excelImportBtn").onclick = () => {
+  document.getElementById("excelFileInput").click();
+};
 
-  const input = document.createElement("input");
-  input.type = "file";
-  input.accept = ".xlsx";
+document.getElementById("excelFileInput").addEventListener("change", handleExcelImport);
 
-  input.onchange = async (e) => {
-    const file = e.target.files[0];
-    const data = await file.arrayBuffer();
-    const workbook = XLSX.read(data);
+async function handleExcelImport(event) {
+  const file = event.target.files[0];
+  if (!file) return;
 
-    // Alte Einträge löschen
-    await supa.from("trainings").delete().neq("id", 0);
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const data = new Uint8Array(e.target.result);
+    const workbook = XLSX.read(data, { type: "array" });
 
-    const inserts = [];
-    const sports = ["schwimmen", "rad", "lauf", "koppel", "freiwasser"];
+    const newTrainings = [];
 
-    // 🔥 ALLE Tabellenblätter durchgehen
-    for (const sheetName of workbook.SheetNames) {
+    // ALLE Tabellenblätter durchgehen
+    workbook.SheetNames.forEach(sheetName => {
       const sheet = workbook.Sheets[sheetName];
       const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
 
-      // Leere Sheets überspringen
-      if (rows.length === 0) continue;
-
-      console.log("Importiere Blatt:", sheetName);
-
       rows.forEach(row => {
+        const date = formatExcelDate(row["Datum"]);
+        if (!date) return;
 
-        // Spaltennamen normalisieren
-        const normalized = {};
-        Object.keys(row).forEach(key => {
-          normalized[key.trim().toLowerCase()] = row[key];
-        });
+        // Phase (Trainingsphase)
+        if (row["Trainingsphase"]) {
+          newTrainings.push({
+  date: date,
+  athlete: "Phase",
+  phase: row["Trainingsphase"],
+  training: row["konkretes Training"] || ""
+});
 
-        // Datum erkennen
-        let excelDate =
-          normalized["datum"] ||
-          normalized["date"] ||
-          normalized["tag"] ||
-          normalized["__empty"] ||
-          normalized["__empty_1"];
-
-        if (!excelDate) return;
-
-        let jsDate;
-
-        if (typeof excelDate === "number") {
-          jsDate = XLSX.SSF.parse_date_code(excelDate);
-        } else {
-          const d = new Date(excelDate);
-          if (!isNaN(d)) {
-            jsDate = { y: d.getFullYear(), m: d.getMonth() + 1, d: d.getDate() };
-          }
         }
 
-        if (!jsDate) return;
+      ["Lasse", "Tora", "Kerstin"].forEach(name => {
+  if (row[name] && row[name].trim() !== "") {
+    newTrainings.push({
+      date: date,
+      athlete: name,
+      phase: row["Trainingsphase"] || "",
+      training: row["konkretes Training"] || ""
+    });
+  }
+});
+});
+    });
 
-        const dateString = `${jsDate.y}-${String(jsDate.m).padStart(2,"0")}-${String(jsDate.d).padStart(2,"0")}`;
+    // In Supabase speichern
+    const { error } = await supa.from("trainings").insert(newTrainings);
 
-        // Trainingsphase
-        const rawPhase = (normalized["trainingsphase"] || "").trim().toLowerCase();
-        const phase = rawPhase.split("(")[0].trim();
-
-        // Konkretes Training
-        const rawDetail = (normalized["konkretes training"] || normalized["training"] || "").trim().toLowerCase();
-
-        let sport = "";
-        let variant = "";
-
-        const bracketMatch = rawDetail.match(/\((.*?)\)/);
-        let inside = bracketMatch ? bracketMatch[1].trim() : "";
-
-        if (sports.some(s => inside.includes(s))) {
-          sport = sports.find(s => inside.includes(s));
-        } else if (inside.includes("chatgpt")) {
-          variant = inside;
-        }
-
-        const before = rawDetail.split("(")[0].trim();
-
-        if (!variant) {
-          const vMatch = before.match(/chatgpt\s*\d+/i);
-          if (vMatch) variant = vMatch[0].toLowerCase();
-        }
-
-        if (!sport) {
-          const sMatch = sports.find(s => before.includes(s));
-          if (sMatch) sport = sMatch;
-        }
-
-        // Athleten
-        ["lasse","tora","kerstin"].forEach(name => {
-          const value = normalized[name];
-          if (value && value.trim() !== "") {
-            inserts.push({
-              date: dateString,
-              athlete: name.charAt(0).toUpperCase() + name.slice(1),
-              training: value,
-              phase: phase,
-              variant: variant,
-              sport: sport
-            });
-          }
-        });
-
-        // Phase-Eintrag
-        inserts.push({
-          date: dateString,
-          athlete: "Phase",
-          training: "",
-          phase: phase,
-          variant: variant,
-          sport: sport
-        });
-      });
+    if (error) {
+      console.error(error);
+      alert("Fehler beim Import.");
+      return;
     }
 
-    // Alles speichern
-    if (inserts.length > 0) {
-      await supa.from("trainings").insert(inserts);
-    }
-
+    alert("Excel erfolgreich importiert!");
     await loadTrainings();
-await loadWordFiles();
-
-// HIER GENAU
-console.log("Training Beispiel:", trainings[0]);
-console.log("Word Beispiel:", wordFiles[0]);
-
-renderCalendar();
-
-
+    renderCalendar();
   };
 
-  input.click();
-});
+  reader.readAsArrayBuffer(file);
+}
 
 
 // ------------------------------------------------------
-// WORD IMPORT (Coach)
+// WORD IMPORT (Coach) – FUNKTIONIERT
 // ------------------------------------------------------
 
 document.getElementById("importDocs").addEventListener("click", () => {
@@ -1108,3 +1172,62 @@ document.getElementById("importDocs").addEventListener("click", () => {
 
   input.click();
 });
+// ------------------------------------------------------
+// INIT
+// ------------------------------------------------------
+async function init() {
+
+  // USER LADEN
+  const { data: userData } = await supa.auth.getUser();
+  const user = userData?.user;
+
+  if (!user) {
+    window.location.href = "index.html";
+    return;
+  }
+
+  currentUser = user;
+
+  // PROFIL LADEN
+  const { data: profile } = await supa
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+
+  if (profile) {
+    currentAthleteName = profile.athlete_name;   // <-- RICHTIG
+  }
+
+  // COACH ERKENNEN
+  isCoach = user.email === "coach@training.de";
+
+  console.log("Eingeloggt als:", user.email);
+  console.log("isCoach:", isCoach);
+  console.log("currentAthleteName:", currentAthleteName);
+
+  // COACH-ONLY ELEMENTE
+  document.querySelectorAll(".coach-only").forEach(el => {
+    el.style.display = isCoach ? "inline-block" : "none";
+  });
+
+  const athleteButtons = document.getElementById("coachAthleteButtons");
+  if (!isCoach && athleteButtons) {
+    athleteButtons.style.display = "none";
+  }
+
+  // DATEN LADEN
+  await loadTrainings();
+  await loadWordFiles();
+
+  // KALENDER RENDERN
+  renderCalendar();
+  let trainings = allTrainings;
+
+// Coach sieht ALLES
+if (!isCoach) {
+    // Athlet sieht NUR seine eigenen Trainings
+    trainings = trainings.filter(t => t.athlete === currentAthleteName);
+}
+
+}

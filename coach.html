@@ -96,8 +96,13 @@
     <section class="apple-card">
       <h2>Monatskalender</h2>
 
-      <button id="importExcel" class="import-btn coach-only">Excel importieren</button>
-      <button id="importDocs" class="import-btn coach-only">Word-Dateien importieren</button>
+      <button class="coach-only" id="excelImportBtn">Excel importieren</button>
+<input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display:none;">
+
+<button class="coach-only" id="importDocs">Word-Dateien importieren</button>
+<button class="coach-only" id="deleteAthleteBtn">Athlet löschen</button>
+
+
 
 
       <div class="calendar-header">
@@ -108,6 +113,29 @@
 
       <div id="calendarGrid" class="calendar-grid"></div>
     </section>
+    <div class="coach-only" id="createUserBox" style="margin-top:20px;">
+  <h3>Neuen Athleten anlegen</h3>
+
+  <label>Email:</label>
+  <input id="newUserEmail" type="email">
+
+  <label>Passwort:</label>
+  <input id="newUserPassword" type="password">
+
+  <label>Trainingsplan übernehmen von:</label>
+  <select id="newUserSource">
+    <option value="Lasse">Lasse</option>
+    <option value="Tora">Tora</option>
+    <option value="Kerstin">Kerstin</option>
+  </select>
+
+  <label>Neuer Athletenname:</label>
+  <input id="newUserAthleteName" type="text" placeholder="z.B. Julia, Jochen">
+
+  <button id="createUserSubmit">Athlet erstellen</button>
+</div>
+
+
   </main>
 
   <!-- XLSX -->
